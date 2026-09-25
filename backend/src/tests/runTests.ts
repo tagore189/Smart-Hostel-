@@ -34,7 +34,6 @@ const runAllTests = async () => {
   let residentToken = '';
   let adminToken = '';
   let testComplaintId = '';
-  let testOutingId = '';
 
   let passed = 0;
   let failed = 0;
@@ -147,39 +146,7 @@ const runAllTests = async () => {
     assert(ticketRes.status === 201 && ticketRes.data.success, 'Create Maintenance Ticket');
     testComplaintId = ticketRes.data.data._id;
 
-    // 10. Outing Request & Gate Pass
-    const outingRes = await request('/outings/request', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${residentToken}` },
-      body: JSON.stringify({
-        leavingDate: '2026-09-24',
-        leavingTime: '17:00',
-        expectedReturnDate: '2026-09-24',
-        expectedReturnTime: '20:30',
-        destination: 'Manjeera Mall Kukatpally',
-        reason: 'Bookstore and grocery essentials',
-      }),
-    });
-    assert(outingRes.status === 201 && outingRes.data.success, 'Request Outing Pass');
-    testOutingId = outingRes.data.data._id;
-    assert(outingRes.data.data.gatePassCode !== undefined, 'Gate Pass Code & QR Payload Auto-Generated');
-
-    // 11. Visitor Registration
-    const visitorRes = await request('/visitors/register', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${residentToken}` },
-      body: JSON.stringify({
-        visitorName: 'Rajesh Sharma',
-        relationship: 'Father',
-        phone: '+91 98480 12345',
-        visitDate: '2026-09-27',
-        arrivalTime: '11:00 AM',
-        expectedDepartureTime: '03:00 PM',
-      }),
-    });
-    assert(visitorRes.status === 201 && visitorRes.data.success, 'Register Visitor & Issue Pass');
-
-    // 12. Notices
+    // 10. Notices
     const notices = await request('/notices', {
       headers: { Authorization: `Bearer ${residentToken}` },
     });

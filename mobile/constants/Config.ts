@@ -1,26 +1,16 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-const getDevApiUrl = (): string => {
+const getApiUrl = (): string => {
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
 
-  // If running via Expo Go on physical device, resolve hostUri if available
-  const debuggerHost = Constants.expoConfig?.hostUri;
-  if (debuggerHost) {
-    const ip = debuggerHost.split(':')[0];
-    return `http://${ip}:5000/api`;
-  }
-
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:5000/api';
-  }
-
-  return 'http://127.0.0.1:5000/api';
+  // Production-safe default. Set EXPO_PUBLIC_API_URL explicitly per environment.
+  return 'https://api.example.com/api';
 };
 
-export const API_BASE_URL = getDevApiUrl();
+export const API_BASE_URL = getApiUrl();
 
 export const APP_CONFIG = {
   appName: 'SLG Luxury Ladies PG',

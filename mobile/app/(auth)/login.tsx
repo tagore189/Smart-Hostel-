@@ -18,12 +18,11 @@ import { Colors, Typography, BorderRadius, Spacing } from '../../constants/Theme
 import { useAuth } from '../_layout';
 
 export default function LoginScreen() {
-  const { signIn, devSignIn } = useAuth();
+  const { signIn } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [devLoading, setDevLoading] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
@@ -54,17 +53,6 @@ export default function LoginScreen() {
       Alert.alert('Login Failed', err.message || 'Unable to sign in. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDevLogin = async (role: string = 'RESIDENT') => {
-    setDevLoading(true);
-    try {
-      await devSignIn(role);
-    } catch (err: any) {
-      Alert.alert('Dev Login Error', err.message || 'Ensure the backend is running and seeded.');
-    } finally {
-      setDevLoading(false);
     }
   };
 
@@ -174,51 +162,6 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
 
-            {/* Dev Login (Only visible in development builds) */}
-            {__DEV__ && (
-              <>
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>or development mode</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-
-                <View style={styles.devSection}>
-                  <Text style={styles.devSectionTitle}>Quick Dev Login</Text>
-                  <View style={styles.devRoleRow}>
-                    <TouchableOpacity
-                      style={styles.devRoleBtn}
-                      onPress={() => handleDevLogin('RESIDENT')}
-                      disabled={devLoading}
-                    >
-                      <Ionicons name="person-outline" size={14} color={Colors.primary} />
-                      <Text style={styles.devRoleText}>Resident</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.devRoleBtn}
-                      onPress={() => handleDevLogin('WARDEN')}
-                      disabled={devLoading}
-                    >
-                      <Ionicons name="shield-outline" size={14} color="#059669" />
-                      <Text style={[styles.devRoleText, { color: '#059669' }]}>Warden</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.devRoleBtn}
-                      onPress={() => handleDevLogin('ADMIN')}
-                      disabled={devLoading}
-                    >
-                      <Ionicons name="key-outline" size={14} color="#7C3AED" />
-                      <Text style={[styles.devRoleText, { color: '#7C3AED' }]}>Admin</Text>
-                    </TouchableOpacity>
-                  </View>
-                  {devLoading && (
-                    <ActivityIndicator size="small" color={Colors.primary} style={{ marginTop: 8 }} />
-                  )}
-                </View>
-              </>
-            )}
           </Animated.View>
 
           {/* Footer */}
