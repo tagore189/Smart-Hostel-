@@ -66,18 +66,45 @@ export default function RootLayout() {
     })();
   }, []);
 
-  // Protect routes
+  // Protect routes with role-based routing
   useEffect(() => {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inAdminGroup = (segments[0] as string) === '(admin)';
+    const inResidentGroup = (segments[0] as string) === '(resident)';
 
-    if (!user && !inAuthGroup) {
-      router.replace('/(auth)/login');
-    } else if (user && inAuthGroup) {
-      router.replace('/(resident)/home');
+    if (!user) {
+      if (!inAuthGroup) {
+        router.replace('/(auth)/login');
+      }
+      return;
     }
-  }, [user, segments, isLoading]);
+
+    const isAdminRole = ['ADMIN', 'WARDEN', 'SUPER_ADMIN'].includes(user.role);
+
+    // If authenticated user lands in (auth) group, redirect based on role
+    if (inAuthGroup) {
+      if (isAdminRole) {
+        router.replace('/(admin)/dashboard' as any);
+      } else {
+        router.replace('/(resident)/home');
+      }
+      return;
+    }
+
+    // Role protection: Residents can NEVER access (admin) screens
+    if (!isAdminRole && inAdminGroup) {
+      router.replace('/(resident)/home');
+      return;
+    }
+
+    // Role protection: Admins/Wardens without resident profile entering resident routes redirect to admin dashboard
+    if (isAdminRole && inResidentGroup && !resident) {
+      router.replace('/(admin)/dashboard' as any);
+      return;
+    }
+  }, [user, resident, segments, isLoading]);
 
   const signIn = async (identifier: string, password: string) => {
     const response = await api.post<any>('/auth/login', { identifier, password });
@@ -143,6 +170,7 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(resident)" />
+          <Stack.Screen name="(admin)" />
         </Stack>
       </QueryClientProvider>
     </AuthContext.Provider>

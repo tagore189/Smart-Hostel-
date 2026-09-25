@@ -229,6 +229,81 @@ const runAllTests = async () => {
       });
       assert(updateComp.status === 200 && updateComp.data.data.status === 'RESOLVED', 'Admin Resolve Complaint');
     }
+
+    // 17. Mess Weekly & Alias
+    const messWeekly = await request('/mess/weekly', {
+      headers: { Authorization: `Bearer ${residentToken}` },
+    });
+    assert(messWeekly.status === 200 && messWeekly.data.success, 'Fetch Mess Weekly Menu');
+
+    const messMenuAlias = await request('/mess/menu', {
+      headers: { Authorization: `Bearer ${residentToken}` },
+    });
+    assert(messMenuAlias.status === 200 && messMenuAlias.data.success, 'Mess Menu Alias Working');
+
+    // 18. Admin Emergency Alerts
+    const adminEmerg = await request('/admin/emergency', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    assert(adminEmerg.status === 200 && Array.isArray(adminEmerg.data.data), 'Fetch Admin Emergency Alerts');
+
+    if (adminEmerg.data.data.length > 0) {
+      const alertId = adminEmerg.data.data[0]._id;
+      const updateAlert = await request(`/admin/emergency/${alertId}/status`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          status: 'ACKNOWLEDGED',
+          notes: 'Warden dispatched night supervisor to check on resident.',
+        }),
+      });
+      assert(updateAlert.status === 200 && updateAlert.data.success, 'Admin Acknowledge Emergency Alert');
+    }
+
+    // 19. Admin Mess Endpoints (Feedback, Opt-Outs, Menu Upsert)
+    const adminFeedback = await request('/admin/mess/feedback', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    assert(adminFeedback.status === 200 && Array.isArray(adminFeedback.data.data), 'Fetch Admin Mess Feedback');
+
+    const adminOptOuts = await request('/admin/mess/opt-outs', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    assert(adminOptOuts.status === 200 && adminOptOuts.data.data.totalOptOuts !== undefined, 'Fetch Admin Mess Opt-Out Stats');
+
+    const upsertMenu = await request('/admin/mess/menu', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({
+        dayOfWeek: 'Monday',
+        mealType: 'Breakfast',
+        items: ['Masala Dosa', 'Coconut Chutney', 'Filter Coffee'],
+        timing: '7:30 AM — 9:00 AM',
+        isVeg: true,
+      }),
+    });
+    assert(upsertMenu.status === 200 && upsertMenu.data.success, 'Admin Upsert Meal Menu');
+
+    // 20. Admin Operations Endpoints
+    const adminResidents = await request('/admin/residents', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    assert(adminResidents.status === 200 && Array.isArray(adminResidents.data.data), 'Admin Residents List');
+
+    const adminRooms = await request('/admin/rooms', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    assert(adminRooms.status === 200 && Array.isArray(adminRooms.data.data), 'Admin Rooms & Beds Allocation');
+
+    const adminStaff = await request('/admin/staff', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    assert(adminStaff.status === 200 && Array.isArray(adminStaff.data.data), 'Admin Staff Directory');
+
+    const adminNotices = await request('/admin/notices', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    assert(adminNotices.status === 200 && Array.isArray(adminNotices.data.data), 'Admin Notices List');
   } catch (err: any) {
     console.error('Fatal test error:', err);
     failed++;

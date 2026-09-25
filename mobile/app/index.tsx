@@ -16,6 +16,10 @@ export default function Index() {
   }
 
   if (user) {
+    const isAdmin = ['ADMIN', 'WARDEN', 'SUPER_ADMIN'].includes(user.role);
+    if (isAdmin) {
+      return <Redirect href={'/(admin)/dashboard' as any} />;
+    }
     return <Redirect href="/(resident)/home" />;
   }
 

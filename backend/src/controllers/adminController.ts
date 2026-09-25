@@ -530,3 +530,112 @@ export const getAdminReports = async (req: AuthRequest, res: Response): Promise<
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Emergency Alerts Management
+export const getAdminEmergencyAlerts = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const alerts = await EmergencyAlert.find().sort({ createdAt: -1 });
+    res.json({ success: true, data: alerts });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateEmergencyAlertStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { status, notes } = req.body;
+
+    const alert = await EmergencyAlert.findById(id);
+    if (!alert) {
+      res.status(404).json({ success: false, message: 'Emergency alert not found' });
+      return;
+    }
+
+    alert.status = status;
+    alert.handledBy = req.user?._id;
+    alert.handledByName = req.user?.name || 'Warden';
+    if (notes) {
+      alert.notes = alert.notes ? `${alert.notes} | ${notes}` : notes;
+    }
+    if (status === 'RESOLVED') {
+      alert.resolvedAt = new Date();
+    }
+
+    await alert.save();
+    res.json({ success: true, message: `Emergency alert status updated to ${status}`, data: alert });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Admin Mess Endpoints
+export const getAdminMessFeedback = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const feedbacks = await MealFeedback.find().sort({ createdAt: -1 }).limit(100);
+    res.json({ success: true, data: feedbacks });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getAdminMessOptOuts = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const optOuts = await MealOptOut.find({ dateStr: todayStr }).sort({ createdAt: -1 });
+
+    const counts: Record<string, number> = {
+      Breakfast: 0,
+      Lunch: 0,
+      Snacks: 0,
+      Dinner: 0,
+    };
+
+    optOuts.forEach((o) => {
+      if (counts[o.mealType] !== undefined) {
+        counts[o.mealType]++;
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        dateStr: todayStr,
+        totalOptOuts: optOuts.length,
+        breakdown: counts,
+        optOuts,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const upsertMealMenu = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { dayOfWeek, mealType, items, timing, isVeg, isSpecial, specialTitle } = req.body;
+    if (!dayOfWeek || !mealType || !items || !timing) {
+      res.status(400).json({ success: false, message: 'dayOfWeek, mealType, items, and timing are required' });
+      return;
+    }
+
+    const menu = await MealMenu.findOneAndUpdate(
+      { dayOfWeek, mealType },
+      {
+        dayOfWeek,
+        mealType,
+        items: Array.isArray(items) ? items : [items],
+        timing,
+        isVeg: isVeg !== undefined ? isVeg : true,
+        isSpecial: !!isSpecial,
+        specialTitle: specialTitle || '',
+      },
+      { upsert: true, new: true }
+    );
+
+    res.json({ success: true, message: 'Meal menu updated successfully', data: menu });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

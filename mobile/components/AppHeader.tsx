@@ -9,6 +9,7 @@ interface AppHeaderProps {
   subtitle?: string;
   showBack?: boolean;
   avatarUrl?: string;
+  showNotification?: boolean;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -16,6 +17,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   subtitle = 'Home',
   showBack = false,
   avatarUrl,
+  showNotification = false,
 }) => {
   const router = useRouter();
 

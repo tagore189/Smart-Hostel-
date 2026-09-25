@@ -57,10 +57,10 @@ export default function LoginScreen() {
     }
   };
 
-  const handleDevLogin = async () => {
+  const handleDevLogin = async (role: string = 'RESIDENT') => {
     setDevLoading(true);
     try {
-      await devSignIn('RESIDENT');
+      await devSignIn(role);
     } catch (err: any) {
       Alert.alert('Dev Login Error', err.message || 'Ensure the backend is running and seeded.');
     } finally {
@@ -174,29 +174,51 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
 
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
+            {/* Dev Login (Only visible in development builds) */}
+            {__DEV__ && (
+              <>
+                <View style={styles.divider}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>or development mode</Text>
+                  <View style={styles.dividerLine} />
+                </View>
 
-            {/* Dev Login (for development) */}
-            <TouchableOpacity
-              style={styles.devButton}
-              onPress={handleDevLogin}
-              disabled={devLoading}
-              activeOpacity={0.8}
-            >
-              {devLoading ? (
-                <ActivityIndicator color={Colors.primary} size="small" />
-              ) : (
-                <>
-                  <Ionicons name="flash-outline" size={18} color={Colors.primary} />
-                  <Text style={styles.devButtonText}>Quick Login (Dev Mode)</Text>
-                </>
-              )}
-            </TouchableOpacity>
+                <View style={styles.devSection}>
+                  <Text style={styles.devSectionTitle}>Quick Dev Login</Text>
+                  <View style={styles.devRoleRow}>
+                    <TouchableOpacity
+                      style={styles.devRoleBtn}
+                      onPress={() => handleDevLogin('RESIDENT')}
+                      disabled={devLoading}
+                    >
+                      <Ionicons name="person-outline" size={14} color={Colors.primary} />
+                      <Text style={styles.devRoleText}>Resident</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.devRoleBtn}
+                      onPress={() => handleDevLogin('WARDEN')}
+                      disabled={devLoading}
+                    >
+                      <Ionicons name="shield-outline" size={14} color="#059669" />
+                      <Text style={[styles.devRoleText, { color: '#059669' }]}>Warden</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.devRoleBtn}
+                      onPress={() => handleDevLogin('ADMIN')}
+                      disabled={devLoading}
+                    >
+                      <Ionicons name="key-outline" size={14} color="#7C3AED" />
+                      <Text style={[styles.devRoleText, { color: '#7C3AED' }]}>Admin</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {devLoading && (
+                    <ActivityIndicator size="small" color={Colors.primary} style={{ marginTop: 8 }} />
+                  )}
+                </View>
+              </>
+            )}
           </Animated.View>
 
           {/* Footer */}
@@ -378,20 +400,42 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     fontWeight: '600',
   },
-  devButton: {
+  devSection: {
+    backgroundColor: Colors.surfaceSecondary,
+    borderRadius: BorderRadius.md,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+    alignItems: 'center',
+  },
+  devSectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  devRoleRow: {
+    flexDirection: 'row',
+    gap: 8,
+    width: '100%',
+  },
+  devRoleBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.primaryLight,
-    borderRadius: BorderRadius.md,
-    paddingVertical: 13,
-    gap: 8,
+    gap: 4,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 8,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#DDD6FE',
+    borderColor: Colors.border,
   },
-  devButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+  devRoleText: {
+    fontSize: 12,
+    fontWeight: '700',
     color: Colors.primary,
   },
   footer: {

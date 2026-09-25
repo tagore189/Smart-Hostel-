@@ -35,7 +35,7 @@ const startServer = async () => {
     // Auto-seed sample data if database is empty
     const { User } = await import('./models');
     const userCount = await User.countDocuments();
-    if (userCount === 0) {
+    if (userCount === 0 && env.NODE_ENV !== 'production') {
       console.log('[Server] Database is empty. Seeding initial data for SLG Luxury PG...');
       const { runSeed } = await import('./seed/seed');
       await runSeed(false);

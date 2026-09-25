@@ -42,15 +42,11 @@ export default function HomeScreen() {
   const router = useRouter();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const { data: dashData, isLoading, refetch, isRefetching } = useQuery({
+  const { data: dashData, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ['dashboard'],
     queryFn: async () => {
-      try {
-        const res = await api.get('/residents/dashboard');
-        return res;
-      } catch {
-        return null;
-      }
+      const res = await api.get('/residents/dashboard');
+      return res.data || res;
     },
   });
 

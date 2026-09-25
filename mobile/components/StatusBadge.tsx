@@ -14,7 +14,7 @@ export type BadgeVariant =
   | string;
 
 export interface StatusBadgeProps {
-  label: string;
+  label?: string;
   variant?: BadgeVariant;
   status?: BadgeVariant;
   size?: 'sm' | 'md';
@@ -27,24 +27,50 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   size = 'md',
 }) => {
   const getBadgeStyle = () => {
-    const v = (variant || status || 'neutral').toLowerCase();
-    switch (v) {
-      case 'success':
+    const raw = (status || variant || 'neutral').toUpperCase();
+
+    // Map known business statuses
+    switch (raw) {
+      case 'PAID':
+      case 'ACTIVE':
+      case 'RESOLVED':
+      case 'APPROVED':
+      case 'SUCCESS':
         return { bg: Colors.successLight, text: Colors.successDark };
-      case 'warning':
+
+      case 'PENDING':
+      case 'SUBMITTED':
+      case 'WARNING':
         return { bg: Colors.warningLight, text: Colors.warningDark };
-      case 'danger':
-      case 'error':
-        return { bg: Colors.errorLight, text: Colors.errorDark };
-      case 'primary':
-      case 'info':
+
+      case 'IN_PROGRESS':
+      case 'ASSIGNED':
+      case 'PRIMARY':
+      case 'OCCUPIED':
         return { bg: Colors.primaryLight, text: Colors.primary };
+
+      case 'OVERDUE':
+      case 'REJECTED':
+      case 'TRIGGERED':
+      case 'DANGER':
+      case 'ERROR':
+      case 'FAILED':
+        return { bg: Colors.errorLight, text: Colors.errorDark };
+
+      case 'AVAILABLE':
+      case 'VACANT':
+        return { bg: '#D1FAE5', text: '#065F46' };
+
+      case 'CLOSED':
+      case 'INACTIVE':
+      case 'MAINTENANCE':
       default:
         return { bg: Colors.surfaceSecondary, text: Colors.textSecondary };
     }
   };
 
   const colors = getBadgeStyle();
+  const textLabel = label || status || variant || 'STATUS';
 
   return (
     <View
@@ -62,7 +88,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
         ]}
         numberOfLines={1}
       >
-        {label}
+        {textLabel}
       </Text>
     </View>
   );
