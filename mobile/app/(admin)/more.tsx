@@ -115,7 +115,7 @@ export default function AdminMoreScreen() {
         <View style={styles.footer}>
           <Text style={styles.footerBranding}>SLG Luxury Ladies PG</Text>
           <Text style={styles.footerLocation}>KPHB / Kukatpally, Hyderabad, Telangana</Text>
-          <Text style={styles.footerVersion}>Admin Console v1.0.0 (Production Ready)</Text>
+          <Text style={styles.footerVersion}>Admin Console v1.0.0</Text>
         </View>
 
         <View style={{ height: 40 }} />

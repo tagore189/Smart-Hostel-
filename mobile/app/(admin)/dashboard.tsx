@@ -109,6 +109,7 @@ export default function AdminDashboardScreen() {
 
           {/* Section 17: Core Building Statistics */}
           <Text style={styles.sectionTitle}>Overview & Key Metrics</Text>
+          <Text style={styles.metricPeriod}>Fees for {stats?.paymentMonth}</Text>
           <View style={styles.statsGrid}>
             {/* Total Residents */}
             <TouchableOpacity
@@ -119,6 +120,11 @@ export default function AdminDashboardScreen() {
               <Text style={styles.statNumber}>{stats?.totalResidents ?? 0}</Text>
               <Text style={styles.statLabel}>Total Residents</Text>
             </TouchableOpacity>
+
+            <View style={[styles.statBox, { borderLeftColor: '#64748B' }]}>
+              <Text style={styles.statNumber}>{stats?.totalRooms ?? 0}</Text>
+              <Text style={styles.statLabel}>Total Rooms</Text>
+            </View>
 
             {/* Occupied Beds */}
             <TouchableOpacity
@@ -146,8 +152,8 @@ export default function AdminDashboardScreen() {
               onPress={() => router.push('/(admin)/payments' as any)}
               activeOpacity={0.8}
             >
-              <Text style={[styles.statNumber, { color: '#10B981' }]}>{stats?.feesPaid ?? 0}</Text>
-              <Text style={styles.statLabel}>Fees Paid</Text>
+              <Text style={[styles.statNumber, { color: '#10B981' }]}>₹{Number(stats?.feesCollectedAmount ?? 0).toLocaleString('en-IN')}</Text>
+              <Text style={styles.statLabel}>Fees Collected</Text>
             </TouchableOpacity>
 
             {/* Fees Pending */}
@@ -156,8 +162,23 @@ export default function AdminDashboardScreen() {
               onPress={() => router.push('/(admin)/payments' as any)}
               activeOpacity={0.8}
             >
-              <Text style={[styles.statNumber, { color: '#DC2626' }]}>{stats?.feesPending ?? stats?.pendingPayments ?? 0}</Text>
+              <Text style={[styles.statNumber, { color: '#DC2626' }]}>₹{Number(stats?.feesPendingAmount ?? 0).toLocaleString('en-IN')}</Text>
               <Text style={styles.statLabel}>Fees Pending</Text>
+            </TouchableOpacity>
+
+            <View style={[styles.statBox, { borderLeftColor: '#0F766E' }]}>
+              <Text style={[styles.statNumber, { color: '#0F766E' }]}>₹{Number(stats?.feesExpectedAmount ?? 0).toLocaleString('en-IN')}</Text>
+              <Text style={styles.statLabel}>Fees Expected</Text>
+            </View>
+
+            <TouchableOpacity style={[styles.statBox, { borderLeftColor: '#0891B2' }]} onPress={() => router.push('/(admin)/payments' as any)} activeOpacity={0.8}>
+              <Text style={[styles.statNumber, { color: '#0891B2' }]}>{stats?.paidResidentCount ?? 0}</Text>
+              <Text style={styles.statLabel}>Residents Paid</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.statBox, { borderLeftColor: '#B91C1C' }]} onPress={() => router.push('/(admin)/payments' as any)} activeOpacity={0.8}>
+              <Text style={[styles.statNumber, { color: '#B91C1C' }]}>{stats?.pendingResidentCount ?? 0}</Text>
+              <Text style={styles.statLabel}>Residents Pending</Text>
             </TouchableOpacity>
 
             {/* Open Complaints */}
@@ -302,6 +323,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.text,
     marginBottom: 12,
+  },
+  metricPeriod: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 10,
   },
   statsGrid: {
     flexDirection: 'row',

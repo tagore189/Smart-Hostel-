@@ -17,6 +17,7 @@ interface AuthContextType {
   devSignIn: (role?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -28,6 +29,7 @@ export const AuthContext = createContext<AuthContextType>({
   devSignIn: async () => {},
   signOut: async () => {},
   refreshUser: async () => {},
+  changePassword: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -93,6 +95,13 @@ export default function RootLayout() {
     if (!user) {
       if (!inAuthGroup) {
         router.replace('/(auth)/login');
+      }
+      return;
+    }
+
+    if (user.mustChangePassword) {
+      if ((segments[0] as string) !== '(auth)' || (segments[1] as string) !== 'change-password') {
+        router.replace('/(auth)/change-password' as any);
       }
       return;
     }
@@ -175,6 +184,11 @@ export default function RootLayout() {
     }
   };
 
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    await api.post('/auth/change-password', { currentPassword, newPassword });
+    await refreshUser();
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loader}>
@@ -185,7 +199,7 @@ export default function RootLayout() {
 
   return (
     <AuthContext.Provider
-      value={{ user, resident, token, isLoading, signIn, devSignIn, signOut, refreshUser }}
+      value={{ user, resident, token, isLoading, signIn, devSignIn, signOut, refreshUser, changePassword }}
     >
       <QueryClientProvider client={queryClient}>
         <StatusBar style="dark" />

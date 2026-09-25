@@ -26,22 +26,30 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
       occupiedBeds,
       availableBeds,
       maintenanceBeds,
-      feesPaid,
-      feesPending,
       openComplaints,
       emergencyAlertsCount,
       recentAlerts,
+      activeResidents,
+      activeRooms,
     ] = await Promise.all([
       Resident.countDocuments({ status: 'ACTIVE' }),
       Bed.countDocuments({ status: 'OCCUPIED' }),
       Bed.countDocuments({ status: 'AVAILABLE' }),
       Bed.countDocuments({ status: 'MAINTENANCE' }),
-      Payment.countDocuments({ status: 'PAID' }),
-      Payment.countDocuments({ status: { $in: ['PENDING', 'OVERDUE'] } }),
       Complaint.countDocuments({ status: { $in: ['NEW', 'SUBMITTED', 'ASSIGNED', 'IN_PROGRESS'] } }),
       EmergencyAlert.countDocuments({ status: { $in: ['TRIGGERED', 'ACKNOWLEDGED', 'IN_PROGRESS'] } }),
       EmergencyAlert.find().sort({ createdAt: -1 }).limit(5),
+      Resident.find({ status: 'ACTIVE' }).select('monthlyRent'),
+      Room.countDocuments({ isActive: true }),
     ]);
+
+    const paymentMonth = new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+    const monthPayments = await Payment.find({ month: paymentMonth, status: { $in: ['PAID', 'PENDING', 'OVERDUE'] } }).select('resident amount status');
+    const paidMonthPayments = monthPayments.filter((payment) => payment.status === 'PAID');
+    const feesExpectedAmount = activeResidents.reduce((sum, resident) => sum + (Number(resident.monthlyRent) || 0), 0);
+    const feesCollectedAmount = paidMonthPayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+    const paidResidentCount = new Set(paidMonthPayments.map((payment) => payment.resident.toString())).size;
+    const feesPendingAmount = Math.max(0, feesExpectedAmount - feesCollectedAmount);
 
     const totalBeds = occupiedBeds + availableBeds + maintenanceBeds;
     const occupancyRate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
@@ -50,15 +58,22 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
       success: true,
       data: {
         totalResidents,
+        totalRooms: activeRooms,
         occupiedBeds,
         availableBeds,
         vacantBeds: availableBeds,
         maintenanceBeds,
         totalBeds,
         occupancyRate,
-        feesPaid,
-        feesPending,
-        pendingPayments: feesPending,
+        feesPaid: paidResidentCount,
+        feesPending: Math.max(0, totalResidents - paidResidentCount),
+        paymentMonth,
+        feesExpectedAmount,
+        feesCollectedAmount,
+        feesPendingAmount,
+        paidResidentCount,
+        pendingResidentCount: Math.max(0, totalResidents - paidResidentCount),
+        pendingPayments: Math.max(0, totalResidents - paidResidentCount),
         openComplaints,
         emergencyAlerts: emergencyAlertsCount,
         recentAlerts,
@@ -165,6 +180,7 @@ export const createAdminResident = async (req: AuthRequest, res: Response): Prom
       passwordHash,
       role: 'RESIDENT',
       isActive: true,
+      mustChangePassword: true,
     });
 
     const floor = room.floorNumber;
@@ -400,12 +416,12 @@ export const getAdminPaymentStats = async (req: AuthRequest, res: Response): Pro
     const activeResidents = await Resident.find({ status: 'ACTIVE' });
     const expectedFees = activeResidents.reduce((sum, r) => sum + (r.monthlyRent ?? 0), 0);
 
-    const payments = await Payment.find();
+    const payments = await Payment.find({ month: currentMonth, status: { $in: ['PAID', 'PENDING', 'OVERDUE'] } });
     const paidPayments = payments.filter((p) => p.status === 'PAID');
     const collectedFees = paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
     const pendingFees = Math.max(0, expectedFees - collectedFees);
 
-    const paidCount = paidPayments.length;
+    const paidCount = new Set(paidPayments.map((payment) => payment.resident.toString())).size;
     const pendingCount = Math.max(0, activeResidents.length - paidCount);
 
     res.json({

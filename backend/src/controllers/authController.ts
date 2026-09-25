@@ -4,6 +4,7 @@ import { User, IUser } from '../models/User';
 import { Resident } from '../models/Resident';
 import { env } from '../config/env';
 import { AuthRequest } from '../middleware/auth';
+import bcrypt from 'bcryptjs';
 
 const generateToken = (user: IUser): string => {
   return jwt.sign(
@@ -38,6 +39,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    if (!user.isActive) {
+      res.status(401).json({ success: false, message: 'This account is inactive. Contact the hostel administrator.' });
+      return;
+    }
+
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       res.status(401).json({ success: false, message: 'Invalid credentials.' });
@@ -61,6 +67,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         phone: user.phone,
         role: user.role,
         avatarUrl: user.avatarUrl,
+        mustChangePassword: user.mustChangePassword,
       },
       resident,
     });
@@ -113,6 +120,7 @@ export const devLogin = async (req: Request, res: Response): Promise<void> => {
         phone: user.phone,
         role: user.role,
         avatarUrl: user.avatarUrl,
+        mustChangePassword: user.mustChangePassword,
       },
       resident,
     });
@@ -139,12 +147,33 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
         phone: req.user.phone,
         role: req.user.role,
         avatarUrl: req.user.avatarUrl,
+        mustChangePassword: req.user.mustChangePassword,
       },
       resident,
     });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+export const changePassword = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { currentPassword, newPassword } = req.body || {};
+  if (!req.user || typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+    res.status(400).json({ success: false, message: 'Current and new passwords are required.' });
+    return;
+  }
+  if (newPassword.length < 10 || !/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword) || !/\\d/.test(newPassword)) {
+    res.status(400).json({ success: false, message: 'Use at least 10 characters with uppercase, lowercase, and a number.' });
+    return;
+  }
+  if (!(await req.user.comparePassword(currentPassword))) {
+    res.status(400).json({ success: false, message: 'Current password is incorrect.' });
+    return;
+  }
+  req.user.passwordHash = await bcrypt.hash(newPassword, 12);
+  req.user.mustChangePassword = false;
+  await req.user.save();
+  res.json({ success: true, message: 'Password updated.' });
 };
 
 export const updatePushToken = async (req: AuthRequest, res: Response): Promise<void> => {

@@ -2,6 +2,8 @@ import http from 'http';
 import { app } from '../server';
 import { connectDB, closeDB } from '../config/db';
 import { runSeed } from '../seed/seed';
+import bcrypt from 'bcryptjs';
+import { User } from '../models/User';
 
 let testServer: http.Server;
 let baseUrl: string;
@@ -82,6 +84,24 @@ const runAllTests = async () => {
     });
     assert(adminLogin.status === 200 && adminLogin.data.user.role === 'WARDEN', 'Warden Dev-Login (Mrs. Shanti Reddy)');
     adminToken = adminLogin.data.token;
+
+    // Forced password reset blocks the rest of the API until a strong new
+    // password is set, even for clients that bypass app navigation.
+    const forcedPassword = 'TempPass123';
+    const forcedUser = await User.create({
+      name: 'Password Reset Test', email: 'password-reset-test@slg.invalid', phone: '9000000001',
+      passwordHash: await bcrypt.hash(forcedPassword, 10), role: 'RESIDENT', mustChangePassword: true,
+    });
+    const forcedLogin = await request('/auth/login', { method: 'POST', body: JSON.stringify({ identifier: forcedUser.email, password: forcedPassword }) });
+    const forcedToken = forcedLogin.data.token;
+    const blockedResource = await request('/payments/overview', { headers: { Authorization: `Bearer ${forcedToken}` } });
+    assert(blockedResource.status === 403 && blockedResource.data.code === 'PASSWORD_CHANGE_REQUIRED', 'Temporary password blocks protected API access');
+    const weakPassword = await request('/auth/change-password', { method: 'POST', headers: { Authorization: `Bearer ${forcedToken}` }, body: JSON.stringify({ currentPassword: forcedPassword, newPassword: 'weak' }) });
+    assert(weakPassword.status === 400, 'Password reset rejects weak new passwords');
+    const changedPassword = await request('/auth/change-password', { method: 'POST', headers: { Authorization: `Bearer ${forcedToken}` }, body: JSON.stringify({ currentPassword: forcedPassword, newPassword: 'PermanentPass123' }) });
+    const allowedAfterReset = await request('/auth/me', { headers: { Authorization: `Bearer ${forcedToken}` } });
+    assert(changedPassword.status === 200 && allowedAfterReset.data.user.mustChangePassword === false, 'Password reset clears the forced-change gate');
+    await User.findByIdAndDelete(forcedUser._id);
 
     // 4. Resident Me & Stay
     const stay = await request('/residents/stay', {

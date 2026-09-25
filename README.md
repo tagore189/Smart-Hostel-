@@ -91,3 +91,11 @@ npm test
 These checks validate compilation and the backend integration suite; they do not install the APK on a device or prove the production deployment is configured. The backend suite requires its database test dependencies. Device login, attachment download, administrator workflows, and production signing still need verification against the deployed service.
 
 `backend/npm test` clears and reseeds the MongoDB database configured by `backend/.env`; point it only at a disposable development database.
+
+## Backups and recovery
+
+For production, enable automated MongoDB Atlas backups or scheduled `mongodump` snapshots with point-in-time recovery where the hosting plan supports it. Store encrypted backups in a separate account or bucket, restrict restore access to operators, and set a retention period that matches the business and legal requirements. Complaint file bytes are in MongoDB GridFS and are included in database backups. Test a restore to a separate staging database before relying on a backup. Never restore production data over the active database as a test.
+
+## Completion status
+
+The repository is not yet a deployed production service: production hosting, cloud MongoDB, Expo project linking, Android signing credentials, and device installation checks must be configured by the operator. The implementation plan records remaining app workflows that still need completion.

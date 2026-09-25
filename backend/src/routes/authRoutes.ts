@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { login, devLogin, getMe, updatePushToken } from '../controllers/authController';
+import { login, devLogin, getMe, updatePushToken, changePassword } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
 import { env } from '../config/env';
 
@@ -10,6 +10,7 @@ if (env.NODE_ENV !== 'production') {
   router.post('/dev-login', devLogin);
 }
 router.get('/me', authenticate, getMe);
+router.post('/change-password', authenticate, changePassword);
 router.post('/push-token', authenticate, updatePushToken);
 
 export default router;
