@@ -71,6 +71,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 export const devLogin = async (req: Request, res: Response): Promise<void> => {
   try {
+    // Block dev-login in production
+    if (env.NODE_ENV === 'production') {
+      res.status(403).json({ success: false, message: 'Development login is not available in production.' });
+      return;
+    }
+
     const { role } = req.body; // 'RESIDENT' | 'WARDEN' | 'ADMIN'
     const targetRole = role || 'RESIDENT';
 
