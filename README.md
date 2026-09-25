@@ -1,4 +1,4 @@
-# SLG Luxury Ladies PG
+# Smart Hostel Managament for residents and the Admin
 
 Native Android resident and hostel operations application for SLG Luxury Ladies PG, KPHB / Kukatpally, Hyderabad, Telangana. One Expo APK authenticates against the API and routes residents to resident services and administrators/wardens to the operations console.
 
