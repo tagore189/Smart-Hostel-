@@ -15,10 +15,6 @@ import {
   Complaint,
   MealMenu,
   MealFeedback,
-  OutingRequest,
-  GatePass,
-  Visitor,
-  VisitorPass,
   Notice,
   ResidentDocument,
   EmergencyContact,
@@ -46,10 +42,6 @@ export const runSeed = async (shouldCloseDB: boolean = false) => {
     Complaint.deleteMany({}),
     MealMenu.deleteMany({}),
     MealFeedback.deleteMany({}),
-    OutingRequest.deleteMany({}),
-    GatePass.deleteMany({}),
-    Visitor.deleteMany({}),
-    VisitorPass.deleteMany({}),
     Notice.deleteMany({}),
     ResidentDocument.deleteMany({}),
     EmergencyContact.deleteMany({}),
@@ -512,7 +504,7 @@ export const runSeed = async (shouldCloseDB: boolean = false) => {
     ],
   });
 
-  // 11. Sample Outing Request with QR pass
+  // 11. Resident Documents
   const samplePassCode = 'GP-982104-204';
   await OutingRequest.create({
     resident: resident._id,

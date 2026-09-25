@@ -14,39 +14,54 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { Colors, Typography, Spacing, Shadows, BorderRadius } from '../../constants/Theme';
+import { Colors, Spacing, Shadows, BorderRadius } from '../../constants/Theme';
 import { AppHeader } from '../../components/AppHeader';
 import { Card } from '../../components/Card';
+import { StatusBadge } from '../../components/StatusBadge';
 import { useAuth } from '../_layout';
 import { api } from '../../services/api';
 
 const { width } = Dimensions.get('window');
-
-interface QuickAction {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  route: string;
-  gradient: string;
-  bgColor: string;
-}
-
-const quickActions: QuickAction[] = [
-  { icon: 'card', label: 'Payments', route: '/(resident)/payments', gradient: Colors.primary, bgColor: Colors.primaryLight },
-  { icon: 'restaurant', label: 'Mess & Food', route: '/(resident)/mess', gradient: '#10B981', bgColor: '#D1FAE5' },
-  { icon: 'construct', label: 'Complaints', route: '/(resident)/complaints', gradient: '#F59E0B', bgColor: '#FEF3C7' },
-  { icon: 'warning', label: 'Emergency', route: '/(resident)/emergency', gradient: '#EF4444', bgColor: '#FEE2E2' },
-];
 
 export default function HomeScreen() {
   const { user, resident } = useAuth();
   const router = useRouter();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const { data: dashData, isLoading, isError, error, refetch, isRefetching } = useQuery({
-    queryKey: ['dashboard'],
+  // 1. Dashboard query
+  const {
+    data: dashData,
+    refetch: refetchDash,
+    isRefetching: isDashRefetching,
+  } = useQuery({
+    queryKey: ['resident-dashboard'],
     queryFn: async () => {
       const res = await api.get('/residents/dashboard');
-      return res.data || res;
+      return res.data;
+    },
+  });
+
+  // 2. Payments Overview query (real fee status)
+  const {
+    data: paymentOverview,
+    refetch: refetchPayments,
+  } = useQuery({
+    queryKey: ['payments-overview'],
+    queryFn: async () => {
+      const res = await api.get('/payments/overview');
+      return res.data;
+    },
+  });
+
+  // 3. Today's Mess Menu query (real meals data)
+  const {
+    data: todayMess,
+    refetch: refetchMess,
+  } = useQuery({
+    queryKey: ['mess-today'],
+    queryFn: async () => {
+      const res = await api.get('/mess/today');
+      return res.data;
     },
   });
 
@@ -65,7 +80,25 @@ export default function HomeScreen() {
     return 'Good Evening';
   };
 
-  const firstName = user?.name?.split(' ')[0] || 'Resident';
+  const handleRefreshAll = () => {
+    refetchDash();
+    refetchPayments();
+    refetchMess();
+  };
+
+  const firstName = user?.name?.split(' ')[0] || resident?.name?.split(' ')[0] || 'Resident';
+  const monthlyRent = paymentOverview?.monthlyRent || resident?.monthlyRent || 8000;
+  const currentStatus = paymentOverview?.currentStatus || 'PAID';
+  const isPaid = currentStatus === 'PAID';
+  const mealsList = todayMess?.meals || [];
+
+  const quickActions = [
+    { label: 'Food', icon: 'restaurant', route: '/(resident)/mess', color: '#EA580C', bg: '#FFEDD5' },
+    { label: 'Fees', icon: 'card', route: '/(resident)/payments', color: '#059669', bg: '#D1FAE5' },
+    { label: 'Complaint', icon: 'construct', route: '/(resident)/complaints', color: '#D97706', bg: '#FEF3C7' },
+    { label: 'Notices', icon: 'megaphone', route: '/(resident)/notices', color: '#4F46E5', bg: '#E0E7FF' },
+    { label: 'Emergency', icon: 'alert-circle', route: '/(resident)/emergency', color: '#DC2626', bg: '#FEE2E2' },
+  ];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -76,114 +109,156 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={refetch}
+            refreshing={isDashRefetching}
+            onRefresh={handleRefreshAll}
             colors={[Colors.primary]}
             tintColor={Colors.primary}
           />
         }
       >
-        {/* Greeting Section */}
+        {/* Section 7: Greeting Header */}
         <Animated.View style={[styles.greetingSection, { opacity: fadeAnim }]}>
           <View style={styles.greetingCard}>
             <View style={styles.greetingLeft}>
               <Text style={styles.greetingText}>{getGreeting()},</Text>
               <Text style={styles.userName}>{firstName} ✨</Text>
               <View style={styles.roomBadge}>
-                <Ionicons name="bed-outline" size={14} color={Colors.primary} />
+                <Ionicons name="bed-outline" size={14} color="#FFF" />
                 <Text style={styles.roomBadgeText}>
-                  Room {resident?.roomNumber || '—'} · Bed {resident?.bedCode || resident?.bedNumber || '—'}
+                  Room {resident?.roomNumber || '204'} • Bed {resident?.bedCode || 'B'} · {resident?.floorNumber || '2'}nd Floor
                 </Text>
               </View>
             </View>
-            <Image
-              source={require('../../assets/ananya.jpg')}
-              style={styles.greetingAvatar}
-            />
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarText}>
+                {firstName.substring(0, 2).toUpperCase()}
+              </Text>
+            </View>
           </View>
         </Animated.View>
 
-        {/* Quick Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={[styles.statCard, { backgroundColor: Colors.primaryLight }]}>
-            <Ionicons name="calendar" size={20} color={Colors.primary} />
-            <Text style={styles.statValue}>
-              {resident?.joiningDate || resident?.moveInDate
-                ? `${Math.max(1, Math.ceil((Date.now() - new Date(resident.joiningDate || resident.moveInDate).getTime()) / 86400000))} days`
-                : '258 days'}
+        {/* Section 7: Monthly Fee Card */}
+        <View style={styles.feeBannerCard}>
+          <View style={styles.feeBannerLeft}>
+            <Text style={styles.feeBannerLabel}>Monthly Fee</Text>
+            <Text style={styles.feeBannerAmount}>₹{monthlyRent.toLocaleString('en-IN')}</Text>
+            <Text style={styles.feeBannerMonth}>
+              {paymentOverview?.currentMonth || 'Current Billing Cycle'}
             </Text>
-            <Text style={styles.statLabel}>Your Stay</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#D1FAE5' }]}>
-            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-            <Text style={styles.statValue}>Active</Text>
-            <Text style={styles.statLabel}>Status</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: '#FEF3C7' }]}>
-            <Ionicons name="receipt" size={20} color="#F59E0B" />
-            <Text style={styles.statValue}>₹{(resident?.monthlyRent || resident?.rentAmount || 8000).toLocaleString('en-IN')}</Text>
-            <Text style={styles.statLabel}>Monthly Rent</Text>
+          <View style={styles.feeBannerRight}>
+            <View style={[styles.statusPill, isPaid ? styles.pillPaid : styles.pillPending]}>
+              <Ionicons
+                name={isPaid ? 'checkmark-circle' : 'time'}
+                size={14}
+                color={isPaid ? '#059669' : '#DC2626'}
+              />
+              <Text style={[styles.statusPillText, isPaid ? styles.textPaid : styles.textPending]}>
+                {currentStatus}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.viewPaymentsBtn}
+              onPress={() => router.push('/(resident)/payments')}
+            >
+              <Text style={styles.viewPaymentsText}>Receipts →</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Quick Actions Grid */}
+        {/* Section 7: Quick Actions Grid */}
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionsGrid}>
-          {quickActions.map((action, index) => (
+          {quickActions.map((action) => (
             <TouchableOpacity
               key={action.label}
               style={styles.actionCard}
               onPress={() => router.push(action.route as any)}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
             >
-              <View style={[styles.actionIconBox, { backgroundColor: action.bgColor }]}>
-                <Ionicons name={action.icon} size={24} color={action.gradient} />
+              <View style={[styles.actionIconBox, { backgroundColor: action.bg }]}>
+                <Ionicons name={action.icon as any} size={22} color={action.color} />
               </View>
               <Text style={styles.actionLabel}>{action.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Upcoming Payment Banner */}
-        <Card variant="lavender" style={styles.paymentBanner}>
-          <View style={styles.bannerRow}>
-            <View style={styles.bannerLeft}>
-              <View style={styles.bannerIconCircle}>
-                <Ionicons name="card" size={22} color={Colors.primary} />
-              </View>
-              <View>
-                <Text style={styles.bannerTitle}>Rent Due</Text>
-                <Text style={styles.bannerSubtitle}>
-                  ₹{(resident?.monthlyRent || resident?.rentAmount || 8000).toLocaleString('en-IN')} · 1st of month
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.payNowButton}
-              onPress={() => router.push('/(resident)/payments')}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.payNowText}>Pay Now</Text>
-              <Ionicons name="arrow-forward" size={16} color="#FFF" />
-            </TouchableOpacity>
-          </View>
-        </Card>
+        {/* Section 7: Today's Food Section */}
+        <View style={styles.foodSectionHeader}>
+          <Text style={styles.sectionTitle}>Today's Food</Text>
+          <TouchableOpacity onPress={() => router.push('/(resident)/mess')}>
+            <Text style={styles.seeWeeklyText}>Weekly Menu →</Text>
+          </TouchableOpacity>
+        </View>
 
-        {/* Hostel Info */}
-        <Card style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <Ionicons name="location" size={18} color={Colors.primary} />
-            <Text style={styles.infoText}>KPHB / Kukatpally, Hyderabad, Telangana</Text>
+        {mealsList.length > 0 ? (
+          <View style={styles.mealsContainer}>
+            {mealsList.map((meal: any) => (
+              <Card key={meal._id || meal.mealType} style={styles.mealCard}>
+                <View style={styles.mealCardHeader}>
+                  <View style={styles.mealTypeRow}>
+                    <Ionicons
+                      name={
+                        meal.mealType === 'Breakfast'
+                          ? 'sunny'
+                          : meal.mealType === 'Lunch'
+                          ? 'restaurant'
+                          : meal.mealType === 'Snacks'
+                          ? 'cafe'
+                          : 'moon'
+                      }
+                      size={16}
+                      color={Colors.primary}
+                    />
+                    <Text style={styles.mealTypeTitle}>{meal.mealType}</Text>
+                  </View>
+                  <Text style={styles.mealTiming}>{meal.timing}</Text>
+                </View>
+
+                <Text style={styles.mealItemsText}>
+                  {Array.isArray(meal.items) ? meal.items.join(' · ') : meal.items}
+                </Text>
+              </Card>
+            ))}
           </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="call" size={18} color={Colors.success} />
-            <Text style={styles.infoText}>Warden: +91 98765 43210</Text>
+        ) : (
+          <Card style={styles.mealCard}>
+            <View style={styles.mealTypeRow}>
+              <Ionicons name="restaurant" size={16} color={Colors.primary} />
+              <Text style={styles.mealTypeTitle}>Dining Schedule</Text>
+            </View>
+            <Text style={styles.mealItemsText}>
+              Breakfast: 8:00 AM · Lunch: 12:30 PM · Dinner: 7:30 PM
+            </Text>
+          </Card>
+        )}
+
+        {/* Prominent Emergency Assistance Safety Banner */}
+        <TouchableOpacity
+          style={styles.sosBanner}
+          onPress={() => router.push('/(resident)/emergency')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.sosIconBox}>
+            <Ionicons name="warning" size={24} color="#FFF" />
           </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="shield-checkmark" size={18} color={Colors.warning} />
-            <Text style={styles.infoText}>Security: +91 98765 43211</Text>
+          <View style={styles.sosTextWrap}>
+            <Text style={styles.sosTitle}>Emergency / SOS</Text>
+            <Text style={styles.sosSub}>Immediate warden & security assistance</Text>
           </View>
-        </Card>
+          <View style={styles.sosActionPill}>
+            <Text style={styles.sosActionText}>HELP</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Hostel Location Info */}
+        <View style={styles.hostelInfoCard}>
+          <Ionicons name="location" size={16} color={Colors.primary} />
+          <Text style={styles.hostelInfoText}>
+            SLG Luxury Ladies PG · KPHB / Kukatpally, Hyderabad
+          </Text>
+        </View>
 
         <View style={{ height: 24 }} />
       </ScrollView>
@@ -192,194 +267,245 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scroll: {
-    flex: 1,
-  },
+  safeArea: { flex: 1, backgroundColor: Colors.background },
+  scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: Spacing.gutter,
     paddingBottom: 32,
   },
   greetingSection: {
-    marginTop: 16,
-    marginBottom: 16,
+    marginTop: 14,
+    marginBottom: 14,
   },
   greetingCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: Colors.primary,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 6,
+    borderRadius: BorderRadius.xl,
+    padding: 18,
+    ...Shadows.card,
   },
-  greetingLeft: {
-    flex: 1,
-  },
+  greetingLeft: { flex: 1 },
   greetingText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.85)',
   },
   userName: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#FFF',
     marginTop: 2,
-    letterSpacing: -0.3,
+    marginBottom: 8,
   },
   roomBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 10,
     paddingVertical: 4,
-    marginTop: 10,
+    borderRadius: 8,
     alignSelf: 'flex-start',
+    gap: 6,
   },
   roomBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: '#FFF',
   },
-  greetingAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.3)',
-    marginLeft: 16,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 24,
-  },
-  statCard: {
-    flex: 1,
-    borderRadius: 14,
-    padding: 12,
+  avatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFF',
   },
-  statValue: {
-    fontSize: 14,
+  avatarText: {
+    fontSize: 16,
     fontWeight: '800',
-    color: Colors.text,
-    textAlign: 'center',
+    color: '#FFF',
   },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: '600',
+  feeBannerCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    padding: 16,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 18,
+    ...Shadows.card,
+  },
+  feeBannerLeft: { flex: 1 },
+  feeBannerLabel: {
+    fontSize: 11,
+    fontWeight: '700',
     color: Colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.3,
+  },
+  feeBannerAmount: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: Colors.text,
+    marginTop: 2,
+  },
+  feeBannerMonth: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  feeBannerRight: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  pillPaid: { backgroundColor: '#D1FAE5' },
+  pillPending: { backgroundColor: '#FEE2E2' },
+  statusPillText: { fontSize: 12, fontWeight: '800' },
+  textPaid: { color: '#059669' },
+  textPending: { color: '#DC2626' },
+  viewPaymentsBtn: {
+    paddingVertical: 2,
+  },
+  viewPaymentsText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     color: Colors.text,
-    marginBottom: 14,
-    letterSpacing: -0.2,
+    marginBottom: 10,
   },
   actionsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 24,
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
   actionCard: {
-    width: (width - 32 - 12) / 2,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 8,
     alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.card,
+    flex: 1,
   },
   actionIconBox: {
     width: 48,
     height: 48,
     borderRadius: 14,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
   actionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
     color: Colors.text,
-    textAlign: 'center',
   },
-  paymentBanner: {
+  foodSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  seeWeeklyText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  mealsContainer: {
+    gap: 8,
     marginBottom: 16,
   },
-  bannerRow: {
+  mealCard: {
+    padding: 12,
+  },
+  mealCardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
   },
-  bannerLeft: {
+  mealTypeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    flex: 1,
+    gap: 6,
   },
-  bannerIconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: 'rgba(124, 58, 237, 0.12)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bannerTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+  mealTypeTitle: {
+    fontSize: 14,
+    fontWeight: '800',
     color: Colors.text,
   },
-  bannerSubtitle: {
-    fontSize: 12,
+  mealTiming: {
+    fontSize: 11,
     color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  mealItemsText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  sosBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DC2626',
+    borderRadius: BorderRadius.lg,
+    padding: 14,
+    marginBottom: 14,
+    gap: 12,
+    ...Shadows.card,
+  },
+  sosIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sosTextWrap: { flex: 1 },
+  sosTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFF',
+  },
+  sosSub: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.85)',
     marginTop: 1,
   },
-  payNowButton: {
+  sosActionPill: {
+    backgroundColor: '#FFF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  sosActionText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#DC2626',
+  },
+  hostelInfoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
   },
-  payNowText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  infoCard: {
-    marginBottom: 0,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 6,
-  },
-  infoText: {
-    fontSize: 13,
+  hostelInfoText: {
+    fontSize: 11,
+    fontWeight: '600',
     color: Colors.textSecondary,
-    flex: 1,
   },
 });

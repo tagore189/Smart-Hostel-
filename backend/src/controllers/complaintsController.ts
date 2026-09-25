@@ -4,6 +4,7 @@ import { Complaint, ComplaintCategory, ComplaintPriority } from '../models/Compl
 import { ComplaintComment } from '../models/ComplaintComment';
 import { createNotification } from '../services/notification';
 import { emitToAdmins } from '../services/socket';
+import { getFileType } from '../middleware/upload';
 
 export const getMyComplaints = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -29,6 +30,13 @@ export const getComplaintById = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
+    // Security ownership check: Residents can ONLY view their own complaints
+    const isAdmin = ['ADMIN', 'WARDEN', 'SUPER_ADMIN'].includes(req.user?.role || '');
+    if (!isAdmin && req.resident && !complaint.resident.equals(req.resident._id)) {
+      res.status(403).json({ success: false, message: 'Access denied: You can only view your own complaints.' });
+      return;
+    }
+
     const comments = await ComplaintComment.find({ complaint: complaint._id }).sort({ createdAt: 1 });
 
     res.json({
@@ -51,7 +59,7 @@ export const createComplaint = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    const { category, title, description, priority, photoUrl } = req.body;
+    const { category, title, description, priority, photoUrl, attachments } = req.body;
     if (!category || !title || !description) {
       res.status(400).json({ success: false, message: 'Category, title, and description are required.' });
       return;
@@ -65,11 +73,12 @@ export const createComplaint = async (req: AuthRequest, res: Response): Promise<
       title,
       description,
       priority: (priority || 'MEDIUM') as ComplaintPriority,
-      photoUrl,
-      status: 'SUBMITTED',
+      photoUrl: photoUrl || (attachments && attachments[0]?.url) || undefined,
+      attachments: Array.isArray(attachments) ? attachments : [],
+      status: 'NEW',
       timeline: [
         {
-          status: 'SUBMITTED',
+          status: 'NEW',
           note: 'Complaint submitted by resident.',
           updatedBy: resident.name,
           timestamp: new Date(),
@@ -106,6 +115,31 @@ export const createComplaint = async (req: AuthRequest, res: Response): Promise<
   }
 };
 
+export const uploadComplaintAttachment = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ success: false, message: 'No file provided' });
+      return;
+    }
+
+    const fileType = getFileType(req.file.mimetype);
+    const fileUrl = `/uploads/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      message: 'File uploaded successfully',
+      data: {
+        url: fileUrl,
+        fileType,
+        originalName: req.file.originalname,
+        size: req.file.size,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const addComplaintComment = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -118,6 +152,13 @@ export const addComplaintComment = async (req: AuthRequest, res: Response): Prom
     const complaint = await Complaint.findById(id);
     if (!complaint) {
       res.status(404).json({ success: false, message: 'Complaint not found' });
+      return;
+    }
+
+    // Security check: Resident cannot comment on others' complaints
+    const isAdmin = ['ADMIN', 'WARDEN', 'SUPER_ADMIN'].includes(req.user.role);
+    if (!isAdmin && req.resident && !complaint.resident.equals(req.resident._id)) {
+      res.status(403).json({ success: false, message: 'Access denied: You cannot comment on this complaint.' });
       return;
     }
 
@@ -146,19 +187,17 @@ export const submitFeedback = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
+    // Ownership check
+    if (req.resident && !complaint.resident.equals(req.resident._id)) {
+      res.status(403).json({ success: false, message: 'Access denied: You cannot rate this complaint.' });
+      return;
+    }
+
     complaint.feedbackRating = Number(rating);
     complaint.feedbackComment = comment;
-    complaint.status = 'CLOSED';
-    complaint.timeline.push({
-      status: 'CLOSED',
-      note: `Resident provided feedback (${rating}/5): ${comment || 'Service accepted'}`,
-      updatedBy: req.user?.name || 'Resident',
-      timestamp: new Date(),
-    });
-
     await complaint.save();
 
-    res.json({ success: true, message: 'Feedback submitted', data: complaint });
+    res.json({ success: true, message: 'Thank you for your feedback!' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

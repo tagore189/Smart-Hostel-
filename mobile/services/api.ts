@@ -26,11 +26,16 @@ export const apiRequest = async <T = any>(
 ): Promise<T> => {
   const token = await getToken();
 
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     Accept: 'application/json',
     ...(options.headers as Record<string, string> || {}),
   };
+
+  if (!isFormData && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -40,7 +45,7 @@ export const apiRequest = async <T = any>(
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
 
     const response = await fetch(url, {
       ...options,
@@ -81,7 +86,14 @@ export const api = {
   post: <T = any>(endpoint: string, body?: any, headers?: Record<string, string>) =>
     apiRequest<T>(endpoint, {
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined,
+      headers,
+    }),
+
+  upload: <T = any>(endpoint: string, formData: FormData, headers?: Record<string, string>) =>
+    apiRequest<T>(endpoint, {
+      method: 'POST',
+      body: formData,
       headers,
     }),
 

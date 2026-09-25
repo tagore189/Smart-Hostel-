@@ -4,10 +4,6 @@ export type NotificationType =
   | 'RENT_DUE'
   | 'PAYMENT_SUCCESS'
   | 'COMPLAINT_UPDATE'
-  | 'OUTING_APPROVED'
-  | 'OUTING_REJECTED'
-  | 'VISITOR_APPROVED'
-  | 'VISITOR_REJECTED'
   | 'NEW_NOTICE'
   | 'EMERGENCY_ALERT'
   | 'SYSTEM';
@@ -33,10 +29,6 @@ const NotificationSchema = new Schema<INotification>(
         'RENT_DUE',
         'PAYMENT_SUCCESS',
         'COMPLAINT_UPDATE',
-        'OUTING_APPROVED',
-        'OUTING_REJECTED',
-        'VISITOR_APPROVED',
-        'VISITOR_REJECTED',
         'NEW_NOTICE',
         'EMERGENCY_ALERT',
         'SYSTEM',

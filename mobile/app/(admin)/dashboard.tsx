@@ -14,13 +14,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/Theme';
 import { AppHeader } from '../../components/AppHeader';
-import { Card } from '../../components/Card';
 import { api } from '../../services/api';
 import { useAuth } from '../_layout';
 import { LoadingView, ErrorView } from '../../components/StateViews';
 
 const { width } = Dimensions.get('window');
-const actionCardWidth = (width - 32 - 12) / 3;
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
@@ -41,24 +39,23 @@ export default function AdminDashboardScreen() {
     },
   });
 
-  const quickActions = [
-    { label: 'Residents', icon: 'people', route: '/(admin)/residents', color: '#7C3AED', bg: '#EDE9FE', count: stats?.totalResidents },
-    { label: 'Rooms & Beds', icon: 'business', route: '/(admin)/rooms', color: '#2563EB', bg: '#DBEAFE', count: `${stats?.occupiedBeds || 0}/${stats?.totalBeds || 0}` },
-    { label: 'Payments', icon: 'card', route: '/(admin)/payments', color: '#059669', bg: '#D1FAE5', count: stats?.pendingPayments ? `${stats.pendingPayments} Due` : 'Clear' },
-    { label: 'Complaints', icon: 'construct', route: '/(admin)/complaints', color: '#D97706', bg: '#FEF3C7', count: stats?.openComplaints ? `${stats.openComplaints} Open` : '0' },
-    { label: 'Outings', icon: 'walk', route: '/(admin)/outings', color: '#9333EA', bg: '#F3E8FF', count: stats?.todaysOutings ? `${stats.todaysOutings} Today` : '0' },
-    { label: 'Visitors', icon: 'person-add', route: '/(admin)/visitors', color: '#0D9488', bg: '#CCFBF1', count: stats?.todaysVisitors ? `${stats.todaysVisitors} Today` : '0' },
-    { label: 'Mess & Menu', icon: 'restaurant', route: '/(admin)/mess', color: '#EA580C', bg: '#FFEDD5', count: 'Active' },
-    { label: 'Notices', icon: 'megaphone', route: '/(admin)/notices', color: '#4F46E5', bg: '#E0E7FF', count: 'Broadcast' },
-    { label: 'Emergency', icon: 'alert-circle', route: '/(admin)/emergency', color: '#DC2626', bg: '#FEE2E2', count: stats?.recentAlerts?.length ? `${stats.recentAlerts.length} Alerts` : 'Safe' },
+  const quickAccess = [
+    { label: 'Residents', icon: 'people', route: '/(admin)/residents', color: '#7C3AED', bg: '#EDE9FE', desc: 'All registered residents' },
+    { label: 'Floors & Rooms', icon: 'business', route: '/(admin)/rooms', color: '#2563EB', bg: '#DBEAFE', desc: 'Floor by floor bed matrix' },
+    { label: 'Payments', icon: 'card', route: '/(admin)/payments', color: '#059669', bg: '#D1FAE5', desc: 'Rent records & dues' },
+    { label: 'Food / Mess', icon: 'restaurant', route: '/(admin)/mess', color: '#EA580C', bg: '#FFEDD5', desc: 'Menu schedules & feedback' },
+    { label: 'Complaints', icon: 'construct', route: '/(admin)/complaints', color: '#D97706', bg: '#FEF3C7', desc: 'Maintenance tickets' },
+    { label: 'Notices', icon: 'megaphone', route: '/(admin)/notices', color: '#4F46E5', bg: '#E0E7FF', desc: 'Community broadcasts' },
+    { label: 'Emergency', icon: 'alert-circle', route: '/(admin)/emergency', color: '#DC2626', bg: '#FEE2E2', desc: 'Live alerts & SOS' },
+    { label: 'Staff Roster', icon: 'people-circle', route: '/(admin)/staff', color: '#0D9488', bg: '#CCFBF1', desc: 'Hostel team & shifts' },
   ];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <AppHeader subtitle="Hostel Operations Console" showNotification={false} />
+      <AppHeader subtitle="Admin Dashboard" showNotification={false} />
 
       {isLoading ? (
-        <LoadingView message="Loading operational dashboard..." />
+        <LoadingView message="Loading building overview..." />
       ) : isError ? (
         <ErrorView error={error} onRetry={refetch} title="Dashboard Unavailable" />
       ) : (
@@ -75,23 +72,23 @@ export default function AdminDashboardScreen() {
             />
           }
         >
-          {/* Welcome & Role Card */}
+          {/* Welcome & Admin Identity */}
           <View style={styles.welcomeCard}>
             <View style={styles.welcomeLeft}>
-              <Text style={styles.welcomeGreeting}>Welcome back,</Text>
-              <Text style={styles.welcomeName}>{user?.name || 'Administrator'}</Text>
+              <Text style={styles.hostelTag}>SLG Luxury Ladies PG · KPHB</Text>
+              <Text style={styles.welcomeName}>Welcome, {user?.name || 'Administrator'}</Text>
               <View style={styles.roleBadge}>
                 <Ionicons name="shield-checkmark" size={12} color={Colors.primary} />
                 <Text style={styles.roleText}>{user?.role || 'WARDEN'}</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.logoutBtn} onPress={signOut}>
+            <TouchableOpacity style={styles.logoutBtn} onPress={signOut} activeOpacity={0.7}>
               <Ionicons name="log-out-outline" size={20} color={Colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          {/* Emergency Alert Banner (if any recent alerts) */}
-          {stats?.recentAlerts && stats.recentAlerts.length > 0 && (
+          {/* Active Emergency Alert Banner */}
+          {stats?.recentAlerts && stats.recentAlerts.length > 0 && stats.recentAlerts[0].status !== 'RESOLVED' && (
             <TouchableOpacity
               style={styles.emergencyBanner}
               onPress={() => router.push('/(admin)/emergency' as any)}
@@ -103,114 +100,109 @@ export default function AdminDashboardScreen() {
               <View style={styles.emergencyTextWrap}>
                 <Text style={styles.emergencyTitle}>Active Emergency Alert</Text>
                 <Text style={styles.emergencyDesc}>
-                  {stats.recentAlerts[0].residentName} (Room {stats.recentAlerts[0].roomNumber}) · Tap to review
+                  {stats.recentAlerts[0].residentName} (Room {stats.recentAlerts[0].roomNumber}) · Tap to review & respond
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color="#DC2626" />
             </TouchableOpacity>
           )}
 
-          {/* Key Metrics Overview */}
-          <Text style={styles.sectionTitle}>Hostel Capacity & Occupancy</Text>
-          <View style={styles.kpiRow}>
-            <View style={[styles.kpiCard, { borderLeftColor: Colors.primary }]}>
-              <Text style={styles.kpiValue}>{stats?.totalResidents ?? 0}</Text>
-              <Text style={styles.kpiLabel}>Total Residents</Text>
-              <Text style={styles.kpiSub}>Active stays</Text>
-            </View>
+          {/* Section 17: Core Building Statistics */}
+          <Text style={styles.sectionTitle}>Overview & Key Metrics</Text>
+          <View style={styles.statsGrid}>
+            {/* Total Residents */}
+            <TouchableOpacity
+              style={[styles.statBox, { borderLeftColor: '#7C3AED' }]}
+              onPress={() => router.push('/(admin)/residents' as any)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.statNumber}>{stats?.totalResidents ?? 0}</Text>
+              <Text style={styles.statLabel}>Total Residents</Text>
+            </TouchableOpacity>
 
-            <View style={[styles.kpiCard, { borderLeftColor: '#2563EB' }]}>
-              <Text style={styles.kpiValue}>{stats?.occupancyRate ?? 0}%</Text>
-              <Text style={styles.kpiLabel}>Occupancy Rate</Text>
-              <Text style={styles.kpiSub}>{stats?.occupiedBeds ?? 0} of {stats?.totalBeds ?? 0} beds</Text>
-            </View>
+            {/* Occupied Beds */}
+            <TouchableOpacity
+              style={[styles.statBox, { borderLeftColor: '#2563EB' }]}
+              onPress={() => router.push('/(admin)/rooms' as any)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.statNumber, { color: '#2563EB' }]}>{stats?.occupiedBeds ?? 0}</Text>
+              <Text style={styles.statLabel}>Occupied Beds</Text>
+            </TouchableOpacity>
 
-            <View style={[styles.kpiCard, { borderLeftColor: '#059669' }]}>
-              <Text style={styles.kpiValue}>{stats?.availableBeds ?? 0}</Text>
-              <Text style={styles.kpiLabel}>Available Beds</Text>
-              <Text style={styles.kpiSub}>Ready for move-in</Text>
-            </View>
+            {/* Vacant Beds */}
+            <TouchableOpacity
+              style={[styles.statBox, { borderLeftColor: '#059669' }]}
+              onPress={() => router.push('/(admin)/rooms' as any)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.statNumber, { color: '#059669' }]}>{stats?.vacantBeds ?? stats?.availableBeds ?? 0}</Text>
+              <Text style={styles.statLabel}>Vacant Beds</Text>
+            </TouchableOpacity>
+
+            {/* Fees Paid */}
+            <TouchableOpacity
+              style={[styles.statBox, { borderLeftColor: '#10B981' }]}
+              onPress={() => router.push('/(admin)/payments' as any)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.statNumber, { color: '#10B981' }]}>{stats?.feesPaid ?? 0}</Text>
+              <Text style={styles.statLabel}>Fees Paid</Text>
+            </TouchableOpacity>
+
+            {/* Fees Pending */}
+            <TouchableOpacity
+              style={[styles.statBox, { borderLeftColor: '#DC2626' }]}
+              onPress={() => router.push('/(admin)/payments' as any)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.statNumber, { color: '#DC2626' }]}>{stats?.feesPending ?? stats?.pendingPayments ?? 0}</Text>
+              <Text style={styles.statLabel}>Fees Pending</Text>
+            </TouchableOpacity>
+
+            {/* Open Complaints */}
+            <TouchableOpacity
+              style={[styles.statBox, { borderLeftColor: '#D97706' }]}
+              onPress={() => router.push('/(admin)/complaints' as any)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.statNumber, { color: '#D97706' }]}>{stats?.openComplaints ?? 0}</Text>
+              <Text style={styles.statLabel}>Open Complaints</Text>
+            </TouchableOpacity>
+
+            {/* Emergency Alerts */}
+            <TouchableOpacity
+              style={[styles.statBox, { borderLeftColor: (stats?.emergencyAlerts ?? 0) > 0 ? '#DC2626' : '#6B7280' }]}
+              onPress={() => router.push('/(admin)/emergency' as any)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.statNumber, { color: (stats?.emergencyAlerts ?? 0) > 0 ? '#DC2626' : '#6B7280' }]}>
+                {stats?.emergencyAlerts ?? 0}
+              </Text>
+              <Text style={styles.statLabel}>Emergency Alerts</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Action Center Grid */}
-          <Text style={styles.sectionTitle}>Operations & Management</Text>
-          <View style={styles.actionsGrid}>
-            {quickActions.map((action) => (
+          {/* Quick Access Navigation (Section 17) */}
+          <Text style={styles.sectionTitle}>Hostel Management</Text>
+          <View style={styles.quickAccessGrid}>
+            {quickAccess.map((item) => (
               <TouchableOpacity
-                key={action.label}
-                style={styles.actionCard}
-                onPress={() => router.push(action.route as any)}
+                key={item.label}
+                style={styles.accessCard}
+                onPress={() => router.push(item.route as any)}
                 activeOpacity={0.75}
               >
-                <View style={[styles.actionIconBox, { backgroundColor: action.bg }]}>
-                  <Ionicons name={action.icon as any} size={22} color={action.color} />
+                <View style={[styles.accessIconBox, { backgroundColor: item.bg }]}>
+                  <Ionicons name={item.icon as any} size={22} color={item.color} />
                 </View>
-                <Text style={styles.actionLabel} numberOfLines={1}>{action.label}</Text>
-                <Text style={[styles.actionCount, { color: action.color }]} numberOfLines={1}>
-                  {action.count}
-                </Text>
+                <View style={styles.accessTextWrap}>
+                  <Text style={styles.accessLabel}>{item.label}</Text>
+                  <Text style={styles.accessDesc}>{item.desc}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
               </TouchableOpacity>
             ))}
-          </View>
-
-          {/* Important Attention Items */}
-          <Text style={styles.sectionTitle}>Pending Approvals & Attention</Text>
-          <View style={styles.attentionGrid}>
-            <TouchableOpacity
-              style={styles.attentionCard}
-              onPress={() => router.push('/(admin)/complaints' as any)}
-            >
-              <View style={styles.attentionIcon}>
-                <Ionicons name="construct-outline" size={20} color="#D97706" />
-              </View>
-              <View style={styles.attentionTextWrap}>
-                <Text style={styles.attentionNum}>{stats?.openComplaints ?? 0}</Text>
-                <Text style={styles.attentionLabel}>Open Complaints</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.attentionCard}
-              onPress={() => router.push('/(admin)/payments' as any)}
-            >
-              <View style={styles.attentionIcon}>
-                <Ionicons name="cash-outline" size={20} color="#DC2626" />
-              </View>
-              <View style={styles.attentionTextWrap}>
-                <Text style={styles.attentionNum}>{(stats?.pendingPayments ?? 0) + (stats?.overduePayments ?? 0)}</Text>
-                <Text style={styles.attentionLabel}>Pending Dues</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.attentionCard}
-              onPress={() => router.push('/(admin)/outings' as any)}
-            >
-              <View style={styles.attentionIcon}>
-                <Ionicons name="walk-outline" size={20} color="#7C3AED" />
-              </View>
-              <View style={styles.attentionTextWrap}>
-                <Text style={styles.attentionNum}>{stats?.todaysOutings ?? 0}</Text>
-                <Text style={styles.attentionLabel}>Today's Outings</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.attentionCard}
-              onPress={() => router.push('/(admin)/visitors' as any)}
-            >
-              <View style={styles.attentionIcon}>
-                <Ionicons name="people-outline" size={20} color="#0D9488" />
-              </View>
-              <View style={styles.attentionTextWrap}>
-                <Text style={styles.attentionNum}>{stats?.todaysVisitors ?? 0}</Text>
-                <Text style={styles.attentionLabel}>Today's Visitors</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-            </TouchableOpacity>
           </View>
 
           <View style={{ height: 40 }} />
@@ -233,36 +225,37 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: Colors.surface,
-    padding: 16,
+    padding: 18,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: 16,
-    ...Shadows.sm,
+    ...Shadows.card,
   },
   welcomeLeft: { flex: 1 },
-  welcomeGreeting: {
+  hostelTag: {
     fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '700',
+    color: Colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
   welcomeName: {
     fontSize: 18,
     fontWeight: '800',
     color: Colors.text,
-    letterSpacing: -0.3,
-    marginTop: 1,
   },
   roleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     backgroundColor: Colors.primaryLight,
-    alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
+    alignSelf: 'flex-start',
     marginTop: 6,
+    gap: 4,
   },
   roleText: {
     fontSize: 11,
@@ -270,21 +263,18 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   logoutBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    padding: 10,
     backgroundColor: Colors.surfaceSecondary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: BorderRadius.md,
   },
   emergencyBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1.5,
-    borderColor: '#FCA5A5',
+    backgroundColor: '#FEE2E2',
     padding: 14,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
     marginBottom: 16,
     gap: 12,
   },
@@ -292,98 +282,58 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FEE2E2',
-    justifyContent: 'center',
+    backgroundColor: '#FECACA',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   emergencyTextWrap: { flex: 1 },
   emergencyTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#991B1B',
+    fontWeight: '800',
+    color: '#DC2626',
   },
   emergencyDesc: {
     fontSize: 12,
-    color: '#B91C1C',
+    color: '#991B1B',
     marginTop: 2,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  kpiRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-  },
-  kpiCard: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    padding: 12,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderLeftWidth: 4,
-    ...Shadows.sm,
-  },
-  kpiValue: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '800',
     color: Colors.text,
+    marginBottom: 12,
   },
-  kpiLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
-  kpiSub: {
-    fontSize: 10,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  actionsGrid: {
+  statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
     marginBottom: 20,
   },
-  actionCard: {
-    width: actionCardWidth,
+  statBox: {
+    width: (width - 32 - 10) / 2,
     backgroundColor: Colors.surface,
-    padding: 12,
+    padding: 14,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: Colors.border,
-    alignItems: 'center',
-    ...Shadows.sm,
+    borderLeftWidth: 4,
+    ...Shadows.card,
   },
-  actionIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  actionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '800',
     color: Colors.text,
-    textAlign: 'center',
   },
-  actionCount: {
-    fontSize: 11,
+  statLabel: {
+    fontSize: 12,
     fontWeight: '600',
-    marginTop: 3,
+    color: Colors.textSecondary,
+    marginTop: 4,
   },
-  attentionGrid: {
+  quickAccessGrid: {
     gap: 10,
   },
-  attentionCard: {
+  accessCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.surface,
@@ -392,24 +342,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     gap: 12,
+    ...Shadows.card,
   },
-  attentionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Colors.surfaceSecondary,
-    justifyContent: 'center',
+  accessIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  attentionTextWrap: { flex: 1 },
-  attentionNum: {
-    fontSize: 15,
-    fontWeight: '800',
+  accessTextWrap: { flex: 1 },
+  accessLabel: {
+    fontSize: 14,
+    fontWeight: '700',
     color: Colors.text,
   },
-  attentionLabel: {
-    fontSize: 12,
+  accessDesc: {
+    fontSize: 11,
     color: Colors.textSecondary,
-    marginTop: 1,
+    marginTop: 2,
   },
 });

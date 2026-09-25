@@ -52,7 +52,7 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="rooms"
         options={{
-          title: 'Rooms',
+          title: 'Floors & Rooms',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="business" size={size} color={color} />
           ),
@@ -61,7 +61,7 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="complaints"
         options={{
-          title: 'Tickets',
+          title: 'Complaints',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="construct" size={size} color={color} />
           ),
@@ -79,8 +79,6 @@ export default function AdminLayout() {
 
       {/* Hidden screens accessible via router.push() */}
       <Tabs.Screen name="payments" options={{ href: null }} />
-      <Tabs.Screen name="outings" options={{ href: null }} />
-      <Tabs.Screen name="visitors" options={{ href: null }} />
       <Tabs.Screen name="notices" options={{ href: null }} />
       <Tabs.Screen name="mess" options={{ href: null }} />
       <Tabs.Screen name="staff" options={{ href: null }} />

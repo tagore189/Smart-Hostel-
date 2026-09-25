@@ -9,6 +9,7 @@ export interface IEmergencyAlert extends Document {
   residentPhone: string;
   room?: mongoose.Types.ObjectId;
   roomNumber: string;
+  floorNumber?: number;
   bedCode: string;
   type: AlertType;
   status: AlertStatus;
@@ -31,6 +32,7 @@ const EmergencyAlertSchema = new Schema<IEmergencyAlert>(
     residentPhone: { type: String, required: true },
     room: { type: Schema.Types.ObjectId, ref: 'Room' },
     roomNumber: { type: String, required: true },
+    floorNumber: { type: Number, default: 2 },
     bedCode: { type: String, default: 'B' },
     type: {
       type: String,

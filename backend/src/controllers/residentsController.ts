@@ -140,3 +140,43 @@ export const getResidentDashboard = async (req: AuthRequest, res: Response): Pro
   }
 };
 
+export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    const resident = await Resident.findOne({ user: req.user._id });
+    if (!resident) {
+      res.status(404).json({ success: false, message: 'Resident record not found' });
+      return;
+    }
+
+    // Only allow safe personal fields to be modified by residents
+    // Sensitive fields (room, bed, floor, monthlyRent, status) are strictly rejected
+    const { emergencyContact, workOrCollege, bloodGroup } = req.body;
+
+    if (workOrCollege !== undefined) resident.workOrCollege = workOrCollege;
+    if (bloodGroup !== undefined) resident.bloodGroup = bloodGroup;
+    if (emergencyContact) {
+      resident.emergencyContact = {
+        name: emergencyContact.name || resident.emergencyContact?.name || '',
+        relation: emergencyContact.relation || resident.emergencyContact?.relation || '',
+        phone: emergencyContact.phone || resident.emergencyContact?.phone || '',
+      };
+    }
+
+    await resident.save();
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: resident,
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+

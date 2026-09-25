@@ -6,8 +6,11 @@ export interface IRoom extends Document {
   floorNumber: number;
   wing: string;
   type: 'Single' | 'Double' | 'Triple' | 'Four-Sharing';
+  sharingType: string;
   totalBeds: number;
+  hasAc: boolean;
   rentAmount: number;
+  monthlyRent: number;
   securityDeposit: number;
   facilities: string[];
   wifiSsid: string;
@@ -26,8 +29,11 @@ const RoomSchema = new Schema<IRoom>(
       enum: ['Single', 'Double', 'Triple', 'Four-Sharing'],
       default: 'Double',
     },
+    sharingType: { type: String, default: '2-Share' },
     totalBeds: { type: Number, default: 2 },
+    hasAc: { type: Boolean, default: false },
     rentAmount: { type: Number, required: true, default: 8000 },
+    monthlyRent: { type: Number, default: 8000 },
     securityDeposit: { type: Number, required: true, default: 10000 },
     facilities: [{ type: String }],
     wifiSsid: { type: String, default: 'Hostel_5G_Secured' },

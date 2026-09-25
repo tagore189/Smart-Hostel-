@@ -56,6 +56,7 @@ export const sendSilentWelfareAlert = async (req: AuthRequest, res: Response): P
       residentPhone: resident.phone,
       room: resident.room,
       roomNumber: resident.roomNumber,
+      floorNumber: resident.floorNumber || 2,
       bedCode: resident.bedCode,
       type: 'SILENT_WELFARE',
       status: 'TRIGGERED',

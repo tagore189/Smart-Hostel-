@@ -1,11 +1,15 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export type ComplaintCategory =
-  | 'Electrical'
+  | 'Room'
   | 'Plumbing'
-  | 'AC/Fan'
+  | 'Electricity'
+  | 'Electrical'
   | 'Wi-Fi'
   | 'Cleaning'
+  | 'Food'
+  | 'Maintenance'
+  | 'AC/Fan'
   | 'Furniture'
   | 'Bathroom'
   | 'Other';
@@ -13,6 +17,7 @@ export type ComplaintCategory =
 export type ComplaintPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
 export type ComplaintStatus =
+  | 'NEW'
   | 'SUBMITTED'
   | 'ASSIGNED'
   | 'IN_PROGRESS'
@@ -27,6 +32,13 @@ export interface ITimelineEntry {
   timestamp: Date;
 }
 
+export interface IComplaintAttachment {
+  url: string;
+  fileType: 'image' | 'video' | 'document';
+  originalName: string;
+  size?: number;
+}
+
 export interface IComplaint extends Document {
   resident: mongoose.Types.ObjectId;
   residentName: string;
@@ -36,9 +48,11 @@ export interface IComplaint extends Document {
   description: string;
   priority: ComplaintPriority;
   photoUrl?: string;
+  attachments: IComplaintAttachment[];
   status: ComplaintStatus;
   assignedStaff?: mongoose.Types.ObjectId;
   assignedStaffName?: string;
+  adminResponse?: string;
   timeline: ITimelineEntry[];
   resolvedAt?: Date;
   feedbackRating?: number;
@@ -57,6 +71,16 @@ const TimelineEntrySchema = new Schema<ITimelineEntry>(
   { _id: false }
 );
 
+const AttachmentSchema = new Schema<IComplaintAttachment>(
+  {
+    url: { type: String, required: true },
+    fileType: { type: String, enum: ['image', 'video', 'document'], default: 'image' },
+    originalName: { type: String, required: true },
+    size: { type: Number },
+  },
+  { _id: false }
+);
+
 const ComplaintSchema = new Schema<IComplaint>(
   {
     resident: { type: Schema.Types.ObjectId, ref: 'Resident', required: true, index: true },
@@ -64,7 +88,20 @@ const ComplaintSchema = new Schema<IComplaint>(
     roomNumber: { type: String, required: true },
     category: {
       type: String,
-      enum: ['Electrical', 'Plumbing', 'AC/Fan', 'Wi-Fi', 'Cleaning', 'Furniture', 'Bathroom', 'Other'],
+      enum: [
+        'Room',
+        'Plumbing',
+        'Electricity',
+        'Electrical',
+        'Wi-Fi',
+        'Cleaning',
+        'Food',
+        'Maintenance',
+        'AC/Fan',
+        'Furniture',
+        'Bathroom',
+        'Other',
+      ],
       required: true,
       index: true,
     },
@@ -76,14 +113,16 @@ const ComplaintSchema = new Schema<IComplaint>(
       default: 'MEDIUM',
     },
     photoUrl: { type: String },
+    attachments: [AttachmentSchema],
     status: {
       type: String,
-      enum: ['SUBMITTED', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED'],
-      default: 'SUBMITTED',
+      enum: ['NEW', 'SUBMITTED', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED'],
+      default: 'NEW',
       index: true,
     },
     assignedStaff: { type: Schema.Types.ObjectId, ref: 'Staff' },
     assignedStaffName: { type: String },
+    adminResponse: { type: String },
     timeline: [TimelineEntrySchema],
     resolvedAt: { type: Date },
     feedbackRating: { type: Number, min: 1, max: 5 },

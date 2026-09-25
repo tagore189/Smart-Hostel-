@@ -7,8 +7,6 @@ import messRoutes from './messRoutes';
 import noticeRoutes from './noticeRoutes';
 import emergencyRoutes from './emergencyRoutes';
 import notificationRoutes from './notificationRoutes';
-import outingRoutes from './outingRoutes';
-import visitorRoutes from './visitorRoutes';
 import adminRoutes from './adminRoutes';
 
 const router = Router();
@@ -21,8 +19,6 @@ router.use('/mess', messRoutes);
 router.use('/notices', noticeRoutes);
 router.use('/emergency', emergencyRoutes);
 router.use('/notifications', notificationRoutes);
-router.use('/outings', outingRoutes);
-router.use('/visitors', visitorRoutes);
 router.use('/admin', adminRoutes);
 
 // Health check

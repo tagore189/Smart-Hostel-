@@ -3,16 +3,15 @@ import {
   getDashboardStats,
   getAdminResidents,
   createAdminResident,
+  getAdminFloors,
   getAdminRooms,
+  assignBedResident,
+  vacateBedResident,
   getAdminComplaints,
   updateComplaintStatus,
-  getAdminOutings,
-  approveOuting,
-  rejectOuting,
-  getAdminVisitors,
-  approveVisitor,
-  rejectVisitor,
+  getAdminPaymentStats,
   getAdminPayments,
+  recordAdminPayment,
   createAdminNotice,
   getAdminStaff,
   getAdminReports,
@@ -33,26 +32,35 @@ router.use(authenticate, requireAdmin);
 router.get('/dashboard', getDashboardStats);
 router.get('/residents', getAdminResidents);
 router.post('/residents', createAdminResident);
+
+// Floors & Rooms (Section 19)
+router.get('/floors', getAdminFloors);
 router.get('/rooms', getAdminRooms);
+router.put('/rooms/assign', assignBedResident);
+router.put('/rooms/vacate', vacateBedResident);
+
+// Complaints (Section 22)
 router.get('/complaints', getAdminComplaints);
 router.put('/complaints/:id/status', updateComplaintStatus);
-router.get('/outings', getAdminOutings);
-router.put('/outings/:id/approve', approveOuting);
-router.put('/outings/:id/reject', rejectOuting);
-router.get('/visitors', getAdminVisitors);
-router.put('/visitors/:id/approve', approveVisitor);
-router.put('/visitors/:id/reject', rejectVisitor);
+
+// Payments (Section 20)
+router.get('/payments/stats', getAdminPaymentStats);
 router.get('/payments', getAdminPayments);
+router.post('/payments/record', recordAdminPayment);
+
+// Notices (Section 23)
 router.get('/notices', getNotices);
 router.post('/notices', createAdminNotice);
+
+// Staff (Section 26) & Reports (Section 25)
 router.get('/staff', getAdminStaff);
 router.get('/reports', getAdminReports);
 
-// Emergency routes
+// Emergency routes (Section 24)
 router.get('/emergency', getAdminEmergencyAlerts);
 router.put('/emergency/:id/status', updateEmergencyAlertStatus);
 
-// Mess administration
+// Mess administration (Section 21)
 router.get('/mess/feedback', getAdminMessFeedback);
 router.get('/mess/opt-outs', getAdminMessOptOuts);
 router.post('/mess/menu', upsertMealMenu);

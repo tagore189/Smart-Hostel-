@@ -34,27 +34,21 @@ export default function AdminMoreScreen() {
       title: 'Finance & Records',
       items: [
         { label: 'Payments & Revenue', icon: 'card', route: '/(admin)/payments', color: '#059669', bg: '#D1FAE5', desc: 'Rent collections, receipts & pending dues' },
-      ],
-    },
-    {
-      title: 'Gate & Resident Movement',
-      items: [
-        { label: 'Outing Approvals', icon: 'walk', route: '/(admin)/outings', color: '#9333EA', bg: '#F3E8FF', desc: 'Curfew requests & digital gate passes' },
-        { label: 'Visitor Logs', icon: 'person-add', route: '/(admin)/visitors', color: '#0D9488', bg: '#CCFBF1', desc: 'Guest entries & visitor security badges' },
+        { label: 'Building Reports', icon: 'bar-chart', route: '/(admin)/reports', color: '#2563EB', bg: '#DBEAFE', desc: 'Financial, occupancy & complaint analytics' },
       ],
     },
     {
       title: 'Dining & Communication',
       items: [
-        { label: 'Mess & Dining Hall', icon: 'restaurant', route: '/(admin)/mess', color: '#EA580C', bg: '#FFEDD5', desc: 'Weekly menu schedule & opt-out stats' },
+        { label: 'Mess & Dining Hall', icon: 'restaurant', route: '/(admin)/mess', color: '#EA580C', bg: '#FFEDD5', desc: 'Weekly menu schedule & feedback' },
         { label: 'Hostel Notices', icon: 'megaphone', route: '/(admin)/notices', color: '#4F46E5', bg: '#E0E7FF', desc: 'Broadcast announcements to residents' },
       ],
     },
     {
       title: 'Safety & Administration',
       items: [
-        { label: 'Emergency Console', icon: 'alert-circle', route: '/(admin)/emergency', color: '#DC2626', bg: '#FEE2E2', desc: 'Live welfare alerts & SOS call tracker' },
-        { label: 'Staff Management', icon: 'people-circle', route: '/(admin)/staff', color: '#2563EB', bg: '#DBEAFE', desc: 'Security, maintenance & housekeeping roster' },
+        { label: 'Emergency Console', icon: 'alert-circle', route: '/(admin)/emergency', color: '#DC2626', bg: '#FEE2E2', desc: 'Live welfare alerts & SOS tracker' },
+        { label: 'Staff Management', icon: 'people-circle', route: '/(admin)/staff', color: '#7C3AED', bg: '#EDE9FE', desc: 'Security, maintenance & kitchen team' },
       ],
     },
   ];

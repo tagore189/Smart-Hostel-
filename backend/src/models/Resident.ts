@@ -26,6 +26,7 @@ export interface IResident extends Document {
   securityDeposit: number;
   agreementType: string;
   emergencyContact: IEmergencyContact;
+  bloodGroup: string;
   workOrCollege: string;
   homeAddress: string;
   status: 'ACTIVE' | 'PENDING' | 'VACATED';
@@ -59,6 +60,7 @@ const ResidentSchema = new Schema<IResident>(
       phone: { type: String, default: '+91 98480 12345' },
     },
     workOrCollege: { type: String, default: 'Software Engineer @ Hitec City' },
+    bloodGroup: { type: String, default: '' },
     homeAddress: { type: String, default: 'Plot 42, Jubilee Enclave, Hyderabad' },
     status: { type: String, enum: ['ACTIVE', 'PENDING', 'VACATED'], default: 'ACTIVE' },
   },
