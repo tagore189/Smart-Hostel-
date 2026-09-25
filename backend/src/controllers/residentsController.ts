@@ -78,9 +78,7 @@ export const getMyStay = async (req: AuthRequest, res: Response): Promise<void> 
           floorNumber: resident.floorNumber,
           wing: resident.wing,
           type: 'Double',
-          wifiSsid: 'Hostel_5G_Secured',
-          wifiPassword: 'SLG@204Safe',
-          facilities: ['High-speed 5G Wi-Fi', 'Attached Bathroom', 'Air Conditioning', 'Study Desk', 'Individual Wardrobe'],
+          facilities: [],
         },
         bed: bed || {
           bedCode: resident.bedCode,
@@ -155,6 +153,11 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
 
     // Only allow safe personal fields to be modified by residents
     // Sensitive fields (room, bed, floor, monthlyRent, status) are strictly rejected
+    const protectedFields = ['role', 'isActive', 'status', 'room', 'roomNumber', 'bed', 'bedCode', 'floor', 'floorNumber', 'monthlyRent', 'securityDeposit', 'agreementStartDate', 'agreementEndDate'];
+    if (protectedFields.some((field) => Object.prototype.hasOwnProperty.call(req.body, field))) {
+      res.status(403).json({ success: false, message: 'Hostel-managed account and stay details can only be changed by hostel management.' });
+      return;
+    }
     const { emergencyContact, workOrCollege, bloodGroup } = req.body;
 
     if (workOrCollege !== undefined) resident.workOrCollege = workOrCollege;
@@ -178,5 +181,3 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
-

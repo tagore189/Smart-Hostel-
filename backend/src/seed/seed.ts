@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { connectDB, closeDB } from '../config/db';
+import { env } from '../config/env';
 import {
   User,
   Resident,
@@ -22,6 +23,9 @@ import {
 } from '../models';
 
 export const runSeed = async (shouldCloseDB: boolean = false) => {
+  if (env.NODE_ENV === 'production') {
+    throw new Error('Development seed data is disabled in production.');
+  }
   console.log('--- [SEEDING] Starting SLG Luxury Ladies PG Database Seeding ---');
 
   // Connect
@@ -65,21 +69,13 @@ export const runSeed = async (shouldCloseDB: boolean = false) => {
     phoneWarden: '+91 98765 43210',
     phoneSecurity: '+91 98765 43211',
     emailContact: 'concierge@slgluxurypg.com',
-    wifiSsidDefault: 'Hostel_5G_Secured',
-    wifiPasswordDefault: 'SLG@204Safe',
-    upiPaymentId: 'slgluxurypg@icici',
-    upiReceiverName: 'SLG Luxury Coliving Services',
     standardMonthlyRent: 8000,
     securityDepositAmount: 10000,
-    gateClosingTime: '10:00 PM',
     breakfastTiming: '8:00 AM – 10:00 AM',
     lunchTiming: '12:30 PM – 2:30 PM',
     dinnerTiming: '7:30 PM – 9:30 PM',
     rules: [
-      'Gate closes strictly at 10:00 PM. Use Outing Pass for late return.',
-      'Visitors permitted in ground floor reception lounge between 10:00 AM and 7:00 PM.',
       'Quiet hours observed between 11:00 PM and 6:00 AM.',
-      'High-security biometric & RFID access enabled round the clock.',
     ],
   });
   console.log('✓ Created Hostel Settings for KPHB / Kukatpally, Hyderabad');
@@ -115,8 +111,6 @@ export const runSeed = async (shouldCloseDB: boolean = false) => {
     rentAmount: 8000,
     securityDeposit: 10000,
     facilities: ['High-speed 5G Wi-Fi', 'Attached Bathroom', 'Split AC', 'Geyser', 'Study Desk', 'Individual Wardrobe'],
-    wifiSsid: 'Hostel_5G_Secured (Room 204)',
-    wifiPassword: 'SLG@204Safe',
     isActive: true,
   });
 

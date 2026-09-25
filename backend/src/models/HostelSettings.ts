@@ -15,13 +15,8 @@ export interface IHostelSettings extends Document {
   phoneWarden: string;
   phoneSecurity: string;
   emailContact: string;
-  wifiSsidDefault: string;
-  wifiPasswordDefault: string;
-  upiPaymentId: string;
-  upiReceiverName: string;
   standardMonthlyRent: number;
   securityDepositAmount: number;
-  gateClosingTime: string;
   breakfastTiming: string;
   lunchTiming: string;
   dinnerTiming: string;
@@ -44,13 +39,8 @@ const HostelSettingsSchema = new Schema<IHostelSettings>(
     phoneWarden: { type: String, default: '+91 98765 43210' },
     phoneSecurity: { type: String, default: '+91 98765 43211' },
     emailContact: { type: String, default: 'support@slgluxurypg.com' },
-    wifiSsidDefault: { type: String, default: 'Hostel_5G_Secured' },
-    wifiPasswordDefault: { type: String, default: 'SLG@204Safe' },
-    upiPaymentId: { type: String, default: 'slgluxurypg@icici' },
-    upiReceiverName: { type: String, default: 'SLG Luxury Coliving Services' },
     standardMonthlyRent: { type: Number, default: 8000 },
     securityDepositAmount: { type: Number, default: 10000 },
-    gateClosingTime: { type: String, default: '10:00 PM' },
     breakfastTiming: { type: String, default: '8:00 AM – 10:00 AM' },
     lunchTiming: { type: String, default: '12:30 PM – 2:30 PM' },
     dinnerTiming: { type: String, default: '7:30 PM – 9:30 PM' },

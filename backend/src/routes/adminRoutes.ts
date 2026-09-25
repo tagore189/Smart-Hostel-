@@ -12,6 +12,7 @@ import {
   getAdminPaymentStats,
   getAdminPayments,
   recordAdminPayment,
+  verifyAdminPaymentReference,
   createAdminNotice,
   getAdminStaff,
   getAdminReports,
@@ -47,6 +48,7 @@ router.put('/complaints/:id/status', updateComplaintStatus);
 router.get('/payments/stats', getAdminPaymentStats);
 router.get('/payments', getAdminPayments);
 router.post('/payments/record', recordAdminPayment);
+router.put('/payments/:id/verify', verifyAdminPaymentReference);
 
 // Notices (Section 23)
 router.get('/notices', getNotices);

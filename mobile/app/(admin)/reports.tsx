@@ -233,7 +233,7 @@ export default function AdminReportsScreen() {
               <View style={styles.foodOverviewCard}>
                 <View style={styles.starCircle}>
                   <Ionicons name="star" size={32} color="#F59E0B" />
-                  <Text style={styles.avgRatingText}>{food.averageRating || '4.5'}</Text>
+                  <Text style={styles.avgRatingText}>{food.averageRating ?? 'No ratings yet'}</Text>
                 </View>
                 <View style={styles.foodOverviewInfo}>
                   <Text style={styles.foodTitle}>Overall Food Rating</Text>

@@ -292,7 +292,7 @@ export default function AdminRoomsScreen() {
                               )}
                             </View>
                             <Text style={styles.roomSubInfo}>
-                              Wing {room.wing || 'A'} · ₹{room.monthlyRent || 8000}/mo
+                              Wing {room.wing || '—'} · {room.monthlyRent == null ? 'Rent not set' : `₹${room.monthlyRent}/mo`}
                             </Text>
                           </View>
 

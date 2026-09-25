@@ -58,10 +58,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           {avatarUrl ? (
             <Image source={{ uri: avatarUrl }} style={styles.avatar} />
           ) : (
-            <Image
-              source={require('../assets/ananya.jpg')}
-              style={styles.avatar}
-            />
+            <View style={[styles.avatar, { backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' }]}>
+              <Ionicons name="person" size={20} color={Colors.primary} />
+            </View>
           )}
           <View style={styles.activeDot} />
         </TouchableOpacity>

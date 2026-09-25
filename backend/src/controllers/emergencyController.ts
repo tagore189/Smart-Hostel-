@@ -31,7 +31,6 @@ export const getEmergencyContacts = async (req: AuthRequest, res: Response): Pro
           state: settings?.state || 'Telangana',
           pincode: settings?.pincode || '500072',
           landmark: settings?.landmark || 'Near KPHB Metro Station & Forum Sujana Mall',
-          policeStation: 'KPHB Police Station (0.8 km)',
         },
       },
     });
@@ -94,7 +93,7 @@ export const sendSilentWelfareAlert = async (req: AuthRequest, res: Response): P
 
     res.status(201).json({
       success: true,
-      message: 'Silent Welfare Alert successfully sent to Warden Mrs. Shanti Reddy & Security Desk. Staff is being dispatched.',
+      message: 'Your emergency alert has been recorded and hostel management has been notified.',
       data: alert,
     });
   } catch (error: any) {

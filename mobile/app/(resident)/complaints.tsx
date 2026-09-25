@@ -310,7 +310,7 @@ export default function ComplaintsScreen() {
             <Text style={styles.fieldLabel}>Issue Summary</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. Geyser not heating in Room 204"
+              placeholder="e.g. Geyser not heating in my room"
               placeholderTextColor={Colors.textMuted}
               value={title}
               onChangeText={setTitle}

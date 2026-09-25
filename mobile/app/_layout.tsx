@@ -47,19 +47,35 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
 
-  // Restore session on app launch
+  // Restore and validate the secure session with the backend before routing.
   useEffect(() => {
     (async () => {
       try {
         const storedToken = await getToken();
-        const storedUser = await getUserData();
-        if (storedToken && storedUser) {
-          setToken(storedToken);
-          setUser(storedUser.user || storedUser);
-          setResident(storedUser.resident || null);
+        if (!storedToken) return;
+
+        setToken(storedToken);
+        const response = await api.get<any>('/auth/me');
+        if (!response?.success || !response.user) {
+          throw new Error('Session is no longer valid');
         }
+        setUser(response.user);
+        setResident(response.resident || null);
+        await saveUserData({ user: response.user, resident: response.resident || null });
       } catch (e) {
-        console.warn('[Auth] Error restoring session:', e);
+        const statusCode = e && typeof e === 'object' && 'statusCode' in e ? (e as any).statusCode : undefined;
+        if (statusCode === 0 || statusCode === 408) {
+          // Keep the encrypted session for a temporary outage; protected API calls
+          // still require backend authorization before returning private data.
+          const storedUser = await getUserData();
+          setUser(storedUser?.user || null);
+          setResident(storedUser?.resident || null);
+        } else {
+          await clearAuthStorage();
+          setToken(null);
+          setUser(null);
+          setResident(null);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -100,7 +116,7 @@ export default function RootLayout() {
     }
 
     // Role protection: Admins/Wardens without resident profile entering resident routes redirect to admin dashboard
-    if (isAdminRole && inResidentGroup && !resident) {
+    if (isAdminRole && inResidentGroup) {
       router.replace('/(admin)/dashboard' as any);
       return;
     }
@@ -149,7 +165,13 @@ export default function RootLayout() {
         await saveUserData({ user: response.user, resident: response.resident });
       }
     } catch (e) {
-      console.warn('[Auth] Error refreshing user:', e);
+      if (e instanceof Error && 'statusCode' in e && (e as any).statusCode === 401) {
+        await clearAuthStorage();
+        setUser(null);
+        setResident(null);
+        setToken(null);
+        queryClient.clear();
+      }
     }
   };
 

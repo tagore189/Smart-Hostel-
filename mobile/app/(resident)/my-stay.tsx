@@ -45,38 +45,24 @@ export default function MyStayScreen() {
     });
   };
 
-  const roomNumber = resident?.roomNumber || stay?.room?.roomNumber || '204';
-  const bedCode = resident?.bedCode || resident?.bedNumber || stay?.bed?.bedCode || 'B';
-  const floorNumber = resident?.floorNumber || stay?.room?.floorNumber || 2;
-  const wing = resident?.wing || stay?.room?.wing || 'Wing A';
-  const monthlyRent = resident?.monthlyRent || resident?.rentAmount || stay?.bed?.monthlyRent || 8000;
-  const securityDeposit = resident?.securityDeposit || resident?.depositAmount || 10000;
-  const moveInDate = resident?.joiningDate || resident?.moveInDate || '2026-01-10';
-  const contractEndDate = resident?.agreementEndDate || resident?.contractEndDate || '2026-12-31';
+  const roomNumber = resident?.roomNumber || stay?.room?.roomNumber || 'Unassigned';
+  const bedCode = resident?.bedCode || resident?.bedNumber || stay?.bed?.bedCode || 'Unassigned';
+  const floorNumber = resident?.floorNumber || stay?.room?.floorNumber;
+  const wing = resident?.wing || stay?.room?.wing || 'Not assigned';
+  const monthlyRent = resident?.monthlyRent ?? resident?.rentAmount ?? stay?.bed?.monthlyRent;
+  const securityDeposit = resident?.securityDeposit ?? resident?.depositAmount;
+  const moveInDate = resident?.joiningDate || resident?.moveInDate;
+  const contractEndDate = resident?.agreementEndDate || resident?.contractEndDate;
 
   const emergencyName =
-    resident?.emergencyContact?.name || resident?.emergencyContactName || 'Rajesh Sharma';
-  const emergencyRelation = resident?.emergencyContact?.relation || 'Father';
+    resident?.emergencyContact?.name || resident?.emergencyContactName || 'Not provided';
+  const emergencyRelation = resident?.emergencyContact?.relation || '';
   const emergencyPhone =
-    resident?.emergencyContact?.phone || resident?.emergencyContactPhone || '+91 98480 12345';
+    resident?.emergencyContact?.phone || resident?.emergencyContactPhone || 'Not provided';
 
-  const roommates = stay?.roommates || [
-    {
-      bedCode: 'A',
-      name: 'Priya Patel',
-      phone: '+91 98765 00201',
-      workOrCollege: 'Software Engineer @ Deloitte',
-    },
-  ];
+  const roommates = stay?.roommates || [];
 
-  const facilities = stay?.room?.facilities || [
-    'High-Speed 5G Wi-Fi',
-    'Attached Bathroom with Geyser',
-    'Air Conditioning (AC)',
-    'Personal Wardrobe with Locker',
-    'Solid Teakwood Bed & Mattress',
-    'Study Table & Ergonomic Chair',
-  ];
+  const facilities = stay?.room?.facilities || [];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -97,9 +83,11 @@ export default function MyStayScreen() {
         {/* Hero Card */}
         <View style={styles.heroCard}>
           <View style={styles.heroOverlay}>
-            <Image source={require('../../assets/ananya.jpg')} style={styles.heroAvatar} />
-            <Text style={styles.heroName}>{user?.name || 'Ananya Sharma'}</Text>
-            <Text style={styles.heroEmail}>{user?.email || 'ananya.sharma@slgluxury.com'}</Text>
+            <View style={[styles.heroAvatar, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#EDE9FE' }]}>
+              <Text style={{ color: Colors.primary, fontSize: 22, fontWeight: '800' }}>{(user?.name || 'R').slice(0, 1).toUpperCase()}</Text>
+            </View>
+            <Text style={styles.heroName}>{user?.name || 'Resident'}</Text>
+            <Text style={styles.heroEmail}>{user?.email || '—'}</Text>
             <View style={styles.heroBadges}>
               <StatusBadge status="success" label="Active Resident" />
               <View style={styles.roomCodePill}>
@@ -122,7 +110,7 @@ export default function MyStayScreen() {
             <View style={styles.detailContent}>
               <Text style={styles.detailLabel}>Room & Floor</Text>
               <Text style={styles.detailValue}>
-                Room {roomNumber} ({floorNumber}nd Floor, {wing})
+                Room {roomNumber} · {floorNumber ? `Floor ${floorNumber}` : 'Floor unassigned'} · {wing}
               </Text>
             </View>
           </View>
@@ -153,7 +141,7 @@ export default function MyStayScreen() {
             </View>
             <View style={styles.detailContent}>
               <Text style={styles.detailLabel}>Room Wi-Fi Network</Text>
-              <Text style={styles.detailValue}>SLG_Luxury_5G · Password: SLG@204Safe</Text>
+              <Text style={styles.detailValue}>{stay?.room?.wifiSsid || 'Ask hostel management for the room Wi-Fi details.'}</Text>
             </View>
           </View>
         </Card>
@@ -212,13 +200,13 @@ export default function MyStayScreen() {
           <View style={styles.financeRow}>
             <View style={styles.financeItem}>
               <Text style={styles.financeLabel}>Monthly Rent</Text>
-              <Text style={styles.financeValue}>₹{monthlyRent.toLocaleString('en-IN')}</Text>
+              <Text style={styles.financeValue}>{monthlyRent == null ? 'Not set' : `₹${monthlyRent.toLocaleString('en-IN')}`}</Text>
             </View>
             <View style={styles.financeDivider} />
             <View style={styles.financeItem}>
               <Text style={styles.financeLabel}>Security Deposit</Text>
               <Text style={[styles.financeValue, { color: Colors.success }]}>
-                ₹{securityDeposit.toLocaleString('en-IN')}
+                {securityDeposit == null ? 'Not set' : `₹${securityDeposit.toLocaleString('en-IN')}`}
               </Text>
             </View>
           </View>

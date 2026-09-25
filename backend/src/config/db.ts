@@ -15,7 +15,11 @@ export const connectDB = async (): Promise<string> => {
     console.log(`[DB] Connected to MongoDB at ${env.MONGODB_URI}`);
     return env.MONGODB_URI;
   } catch (err: any) {
-    console.warn(`[DB] Could not connect to primary MongoDB (${err.message}). Starting MongoMemoryServer fallback...`);
+    console.warn(`[DB] Could not connect to primary MongoDB (${err.message}).`);
+    if (env.NODE_ENV === 'production') {
+      throw new Error('Production MongoDB connection failed; refusing to start with ephemeral storage.');
+    }
+    console.warn('[DB] Starting MongoMemoryServer for development/test use.');
     try {
       const { MongoMemoryServer } = await import('mongodb-memory-server');
       mongodInstance = await MongoMemoryServer.create();

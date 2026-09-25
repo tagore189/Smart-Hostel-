@@ -52,7 +52,7 @@ export default function PaymentsScreen() {
     mutationFn: async () => {
       if (!utrNumber.trim()) throw new Error('Please enter the transaction reference / UTR number');
       return await api.post('/payments/submit-reference', {
-        amount: resident?.monthlyRent || 8000,
+        amount: resident?.monthlyRent,
         method: payMethod,
         transactionId: utrNumber.trim(),
         notes: notes.trim(),
@@ -71,9 +71,9 @@ export default function PaymentsScreen() {
   });
 
   const paymentList = overview?.history || [];
-  const currentRent = overview?.monthlyRent || resident?.monthlyRent || 8000;
-  const currentStatus = overview?.currentStatus || 'PAID';
-  const currentMonth = overview?.currentMonth || 'September 2026';
+  const currentRent = overview?.monthlyRent ?? resident?.monthlyRent;
+  const currentStatus = overview?.currentStatus || 'NO_RECORD';
+  const currentMonth = overview?.currentMonth || 'Current month';
 
   const isCurrentPaid = currentStatus === 'PAID';
 
@@ -123,12 +123,12 @@ export default function PaymentsScreen() {
             <View style={styles.feeBreakdownRow}>
               <View>
                 <Text style={styles.feeSubLabel}>Monthly Rent</Text>
-                <Text style={styles.feeAmountText}>₹{currentRent.toLocaleString('en-IN')}</Text>
+                <Text style={styles.feeAmountText}>{currentRent == null ? 'Not set' : `₹${currentRent.toLocaleString('en-IN')}`}</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={styles.feeSubLabel}>Room & Bed</Text>
                 <Text style={styles.roomBedValue}>
-                  Room {resident?.roomNumber || '204'} · Bed {resident?.bedCode || 'B'}
+                  Room {resident?.roomNumber || 'Unassigned'} · Bed {resident?.bedCode || 'Unassigned'}
                 </Text>
               </View>
             </View>
@@ -137,7 +137,7 @@ export default function PaymentsScreen() {
             <View style={styles.paymentInfoBox}>
               <Text style={styles.infoBoxHeading}>Hostel Payment Instructions</Text>
               <Text style={styles.infoBoxText}>
-                Pay via UPI to <Text style={styles.boldText}>slgluxurypg@icici</Text> or visit the front desk with cash. After transferring, tap below to submit your UTR reference for immediate receipt issuance.
+                Use the payment details provided directly by hostel management. After making a transfer, submit its reference here for staff verification. This app does not process online payments.
               </Text>
 
               {!isCurrentPaid && (
@@ -189,7 +189,7 @@ export default function PaymentsScreen() {
                       </View>
 
                       <View style={styles.paymentRight}>
-                        <Text style={styles.paymentAmount}>₹{(payment.amount || currentRent).toLocaleString('en-IN')}</Text>
+                        <Text style={styles.paymentAmount}>{payment.amount == null && currentRent == null ? 'Amount unavailable' : `₹${(payment.amount ?? currentRent).toLocaleString('en-IN')}`}</Text>
                         <View style={[styles.miniStatusBadge, isPaid ? styles.badgePaid : styles.badgePending]}>
                           <Text style={[styles.miniStatusText, isPaid ? styles.textPaid : styles.textPending]}>
                             {payment.status}
@@ -269,7 +269,7 @@ export default function PaymentsScreen() {
               <Text style={styles.inputLabel}>Amount (₹)</Text>
               <TextInput
                 style={[styles.modalInput, { backgroundColor: '#F3F4F6' }]}
-                value={String(currentRent)}
+                value={currentRent == null ? '' : String(currentRent)}
                 editable={false}
               />
 
@@ -320,7 +320,7 @@ export default function PaymentsScreen() {
                 <View style={styles.receiptTop}>
                   <Text style={styles.receiptLabel}>Amount Paid</Text>
                   <Text style={styles.receiptAmount}>
-                    ₹{(selectedPayment.amount || currentRent).toLocaleString('en-IN')}
+                    {selectedPayment.amount == null && currentRent == null ? 'Amount unavailable' : `₹${(selectedPayment.amount ?? currentRent).toLocaleString('en-IN')}`}
                   </Text>
                   <View style={{ marginTop: 6 }}>
                     <StatusBadge status={selectedPayment.status} />

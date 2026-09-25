@@ -32,6 +32,7 @@ const runAllTests = async () => {
   baseUrl = `http://127.0.0.1:${addr.port}/api`;
 
   let residentToken = '';
+  let otherResidentToken = '';
   let adminToken = '';
   let testComplaintId = '';
 
@@ -52,6 +53,10 @@ const runAllTests = async () => {
     // 1. Health check
     const health = await request('/health');
     assert(health.status === 200 && health.data.status === 'online', 'API Health Check Online');
+    const noToken = await request('/admin/dashboard');
+    assert(noToken.status === 401, 'Admin API rejects requests without a token');
+    const invalidToken = await request('/admin/dashboard', { headers: { Authorization: 'Bearer invalid.token.value' } });
+    assert(invalidToken.status === 401, 'Admin API rejects invalid tokens');
 
     // 2. Auth: Resident Login
     const resLogin = await request('/auth/dev-login', {
@@ -62,6 +67,13 @@ const runAllTests = async () => {
     residentToken = resLogin.data.token;
     assert(resLogin.data.resident?.roomNumber === '204', 'Resident Room is 204');
     assert(resLogin.data.resident?.bedCode === 'B', 'Resident Bed is Bed B');
+
+    const otherLogin = await request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ identifier: 'sneha.patel@slgluxury.com', password: 'Welcome@123' }),
+    });
+    assert(otherLogin.status === 200 && otherLogin.data.user.role === 'RESIDENT', 'Second resident can authenticate normally');
+    otherResidentToken = otherLogin.data.token;
 
     // 3. Auth: Admin/Warden Login
     const adminLogin = await request('/auth/dev-login', {
@@ -88,7 +100,7 @@ const runAllTests = async () => {
     assert(payments.data.data.securityDeposit === 10000, 'Security Deposit is ₹10,000');
     assert(payments.data.data.currentStatus === 'PAID', 'Current Rent Status is PAID');
 
-    // 6. Process Payment in Development Mode
+    // 6. The app has no integrated payment gateway; never mark a synthetic payment paid.
     const payRes = await request('/payments/pay', {
       method: 'POST',
       headers: { Authorization: `Bearer ${residentToken}` },
@@ -99,8 +111,7 @@ const runAllTests = async () => {
         isDevelopmentMode: true,
       }),
     });
-    assert(payRes.status === 200 && payRes.data.success, 'Process Development Mode Payment');
-    assert(payRes.data.data.receipt?.receiptNumber !== undefined, 'Receipt Generated for Payment');
+    assert(payRes.status === 501 && payRes.data.success === false, 'Unconfigured online payment is rejected');
 
     // 7. Mess Today & Weekly Menu
     const messToday = await request('/mess/today', {
@@ -133,6 +144,25 @@ const runAllTests = async () => {
     assert(optOutRes.status === 200 && optOutRes.data.optedOut === true, 'Toggle Meal Opt-Out');
 
     // 9. Maintenance Ticket Creation
+    const invalidUploadForm = new FormData();
+    invalidUploadForm.append('file', new Blob(['not a png'], { type: 'image/png' }), 'invalid.png');
+    const invalidUpload = await fetch(`${baseUrl}/complaints/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${residentToken}` },
+      body: invalidUploadForm,
+    });
+    assert(invalidUpload.status === 400, 'Reject file whose content does not match its MIME type');
+
+    const uploadForm = new FormData();
+    uploadForm.append('file', new Blob(['fixture attachment'], { type: 'text/plain' }), 'fixture.txt');
+    const uploadResponse = await fetch(`${baseUrl}/complaints/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${residentToken}` },
+      body: uploadForm,
+    });
+    const uploadData: any = await uploadResponse.json();
+    assert(uploadResponse.status === 200 && uploadData.success, 'Upload complaint file to persistent storage');
+
     const ticketRes = await request('/complaints', {
       method: 'POST',
       headers: { Authorization: `Bearer ${residentToken}` },
@@ -141,10 +171,33 @@ const runAllTests = async () => {
         title: 'Bedside reading lamp flickering',
         description: 'The LED tube near Bed B fluctuates slightly in the evening.',
         priority: 'MEDIUM',
+        attachments: uploadData.data ? [uploadData.data] : [],
       }),
     });
     assert(ticketRes.status === 201 && ticketRes.data.success, 'Create Maintenance Ticket');
     testComplaintId = ticketRes.data.data._id;
+    const otherResidentComplaint = await request(`/complaints/${testComplaintId}`, {
+      headers: { Authorization: `Bearer ${otherResidentToken}` },
+    });
+    assert(otherResidentComplaint.status === 403, 'Resident cannot read another resident complaint');
+    const fileUrl = uploadData.data?.url;
+    if (fileUrl) {
+      const ownFile = await fetch(`${baseUrl.replace('/api', '')}${fileUrl}`, {
+        headers: { Authorization: `Bearer ${residentToken}` },
+      });
+      const otherResidentFile = await fetch(`${baseUrl.replace('/api', '')}${fileUrl}`, {
+        headers: { Authorization: `Bearer ${otherResidentToken}` },
+      });
+      assert(ownFile.status === 200, 'Complaint owner can download their attachment');
+      assert(otherResidentFile.status === 404, 'Another resident cannot download the attachment');
+    }
+
+    const protectedStayUpdate = await request('/residents/me', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${residentToken}` },
+      body: JSON.stringify({ roomNumber: '999', monthlyRent: 1, role: 'ADMIN' }),
+    });
+    assert(protectedStayUpdate.status === 403, 'Resident cannot change role, room, or fees');
 
     // 10. Notices
     const notices = await request('/notices', {

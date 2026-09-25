@@ -1,27 +1,5 @@
-import fs from 'fs';
-import path from 'path';
 import multer, { FileFilterCallback } from 'multer';
 import { Request } from 'express';
-
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-// Storage configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOAD_DIR);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const sanitizedBase = path
-      .basename(file.originalname, ext)
-      .replace(/[^a-zA-Z0-9_-]/g, '_');
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${sanitizedBase}-${uniqueSuffix}${ext}`);
-  },
-});
 
 // File filter for images, videos, and documents
 const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
@@ -56,8 +34,23 @@ export const getFileType = (mimetype: string): 'image' | 'video' | 'document' =>
   return 'document';
 };
 
+export const isFileContentValid = (buffer: Buffer, mimetype: string): boolean => {
+  if (mimetype === 'image/jpeg') return buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]));
+  if (mimetype === 'image/png') return buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (mimetype === 'image/gif') return ['GIF87a', 'GIF89a'].includes(buffer.toString('ascii', 0, 6));
+  if (mimetype === 'image/webp') return buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP';
+  if (mimetype === 'application/pdf') return buffer.toString('ascii', 0, 5) === '%PDF-';
+  if (mimetype === 'application/msword') return buffer.subarray(0, 4).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0]));
+  if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return buffer.toString('ascii', 0, 2) === 'PK';
+  if (mimetype === 'video/webm') return buffer.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
+  if (['video/mp4', 'video/quicktime'].includes(mimetype)) return buffer.toString('ascii', 4, 8) === 'ftyp';
+  if (mimetype === 'video/x-msvideo') return buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'AVI ';
+  if (mimetype === 'text/plain') return !buffer.includes(0);
+  return false;
+};
+
 export const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 25 * 1024 * 1024, // 25 MB max
   },

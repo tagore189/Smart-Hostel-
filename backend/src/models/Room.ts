@@ -13,8 +13,7 @@ export interface IRoom extends Document {
   monthlyRent: number;
   securityDeposit: number;
   facilities: string[];
-  wifiSsid: string;
-  wifiPassword: string;
+  wifiSsid?: string;
   isActive: boolean;
 }
 
@@ -36,8 +35,6 @@ const RoomSchema = new Schema<IRoom>(
     monthlyRent: { type: Number, default: 8000 },
     securityDeposit: { type: Number, required: true, default: 10000 },
     facilities: [{ type: String }],
-    wifiSsid: { type: String, default: 'Hostel_5G_Secured' },
-    wifiPassword: { type: String, default: 'SLG@204Safe' },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

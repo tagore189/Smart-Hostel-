@@ -109,6 +109,18 @@ export default function AdminPaymentsScreen() {
     },
   });
 
+  const verifyMutation = useMutation({
+    mutationFn: () => api.put(`/admin/payments/${selectedPayment._id}/verify`),
+    onSuccess: (res) => {
+      Alert.alert('Payment verified', res.message || 'Reference verified and receipt issued.');
+      setSelectedPayment(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-payment-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard-stats'] });
+    },
+    onError: (err: any) => Alert.alert('Verification failed', err.message || 'Could not verify this reference.'),
+  });
+
   const handleRefresh = () => {
     refetchStats();
     refetchPayments();
@@ -477,9 +489,25 @@ export default function AdminPaymentsScreen() {
                 </View>
 
                 <View style={styles.verifiedNotice}>
-                  <Ionicons name="shield-checkmark" size={16} color="#059669" />
-                  <Text style={styles.verifiedText}>SLG Luxury Ladies PG · Official Verified Transaction</Text>
+                  <Ionicons name={selectedPayment.status === 'PAID' ? 'shield-checkmark' : 'time'} size={16} color={selectedPayment.status === 'PAID' ? '#059669' : '#D97706'} />
+                  <Text style={styles.verifiedText}>{selectedPayment.status === 'PAID' ? 'SLG Luxury Ladies PG · Verified Payment' : 'Reference awaiting staff verification; no receipt has been issued.'}</Text>
                 </View>
+                {selectedPayment.status === 'PENDING' && (
+                  <TouchableOpacity
+                    style={[styles.submitRecordBtn, verifyMutation.isPending && { opacity: 0.6 }]}
+                    disabled={verifyMutation.isPending}
+                    onPress={() => Alert.alert(
+                      'Verify payment reference?',
+                      'Confirm only after checking the transaction in the hostel bank or UPI account.',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Verify and issue receipt', onPress: () => verifyMutation.mutate() },
+                      ]
+                    )}
+                  >
+                    {verifyMutation.isPending ? <ActivityIndicator color="#FFF" /> : <Text style={styles.submitRecordText}>Verify Reference & Issue Receipt</Text>}
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             )}
           </View>

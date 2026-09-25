@@ -19,6 +19,7 @@ import { AppHeader } from '../../components/AppHeader';
 import { Card } from '../../components/Card';
 import { api } from '../../services/api';
 import { useAuth } from '../_layout';
+import { APP_CONFIG } from '../../constants/Config';
 
 export default function EmergencyScreen() {
   const { user, resident } = useAuth();
@@ -57,7 +58,7 @@ export default function EmergencyScreen() {
       return api.post('/emergency/silent-welfare-alert', {
         latitude: coords.latitude,
         longitude: coords.longitude,
-        notes: `Urgent Silent Welfare check requested from Room ${resident?.roomNumber || '204'}, Bed ${resident?.bedCode || 'B'}.`,
+        notes: `Urgent Silent Welfare check requested from Room ${resident?.roomNumber || 'unassigned'}, Bed ${resident?.bedCode || 'unassigned'}.`,
       });
     },
     onSuccess: (res: any) => {
@@ -65,7 +66,7 @@ export default function EmergencyScreen() {
       Alert.alert(
         '🚨 Silent Alert Dispatched',
         res.message ||
-          'Warden Mrs. Shanti Reddy and Security Desk have been alerted with your room number. Stay calm, assistance is on the way.'
+          'Hostel management has received your alert. If you are in immediate danger, call local emergency services.'
       );
     },
     onError: (err: any) => {
@@ -76,7 +77,7 @@ export default function EmergencyScreen() {
   const handleTriggerAlert = () => {
     Alert.alert(
       'Trigger Silent Welfare Alert?',
-      'This will instantly notify Warden Mrs. Shanti Reddy and Front Desk Security with your current room and location.\n\nOnly use in case of genuine concern or emergency.',
+      'This will notify hostel management with your registered room details. Use local emergency services if you need immediate outside assistance.\n\nOnly use in case of genuine concern or emergency.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -105,40 +106,19 @@ export default function EmergencyScreen() {
   };
 
   const hostelLocation = contactsData?.hostelLocation || {
-    name: 'SLG Luxury Ladies PG',
-    address: 'Plot No. 142 & 143, Road No. 2, Phase 1, KPHB Colony',
-    city: 'Kukatpally, Hyderabad, Telangana',
-    pincode: '500072',
-    landmark: 'Near KPHB Metro Station & Forum Sujana Mall',
-    policeStation: 'KPHB Police Station (0.8 km)',
+    name: APP_CONFIG.appName,
+    address: '',
+    city: 'KPHB / Kukatpally, Hyderabad',
+    pincode: APP_CONFIG.pincode,
+    landmark: '',
+    policeStation: '',
   };
 
-  const hostelResponders = contactsData?.hostelResponders || [
-    {
-      name: 'Mrs. Shanti Reddy (Warden)',
-      phone: '+91 98765 43210',
-      role: 'WARDEN',
-      availability: '24/7 Inside Hostel',
-    },
-    {
-      name: 'Security Front Desk',
-      phone: '+91 98765 43219',
-      role: 'SECURITY_DESK',
-      availability: 'Main Gate & Reception',
-    },
-  ];
+  const hostelResponders = contactsData?.hostelResponders || [];
 
-  const nationalHelplines = contactsData?.nationalHelplines || [
-    { name: 'Women Helpline (She Team)', phone: '1091', role: 'WOMEN_HELPLINE' },
-    { name: 'National Emergency Response', phone: '112', role: 'POLICE' },
-    { name: 'Ambulance & Medical Emergency', phone: '108', role: 'AMBULANCE' },
-  ];
+  const nationalHelplines = contactsData?.nationalHelplines || [];
 
-  const familyContact = contactsData?.familyContact || resident?.emergencyContact || {
-    name: 'Rajesh Sharma (Father)',
-    phone: '+91 98765 43299',
-    relationship: 'Father',
-  };
+  const familyContact = contactsData?.familyContact || resident?.emergencyContact || null;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -171,8 +151,8 @@ export default function EmergencyScreen() {
           </TouchableOpacity>
 
           <Text style={styles.sosDisclaimer}>
-            Discreetly notifies Warden Mrs. Shanti Reddy & Gate Security with your exact room (
-            {resident?.roomNumber || '204'}). No loud sirens on your device.
+            Discreetly notifies configured hostel responders with your registered room (
+            {resident?.roomNumber || 'unassigned'}). No loud sirens on your device.
           </Text>
 
           {alertSuccess && (
@@ -194,15 +174,16 @@ export default function EmergencyScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.roomBannerTitle}>YOUR REGISTERED LOCATION</Text>
               <Text style={styles.roomBannerValue}>
-                Room {resident?.roomNumber || '204'} · Bed {resident?.bedCode || 'B'}
+                Room {resident?.roomNumber || 'unassigned'} · Bed {resident?.bedCode || 'unassigned'}
               </Text>
-              <Text style={styles.roomBannerSub}>2nd Floor, Wing A · SLG Luxury Ladies PG</Text>
+              <Text style={styles.roomBannerSub}>{resident?.floorNumber ? `Floor ${resident.floorNumber}` : 'Floor unassigned'} · {resident?.wing || 'Wing unassigned'} · SLG Luxury Ladies PG</Text>
             </View>
           </View>
         </Card>
 
         {/* SECTION 1: HOSTEL RESPONDERS */}
         <Text style={styles.sectionHeading}>On-Duty Hostel Staff (24/7)</Text>
+        {hostelResponders.length === 0 && <Text style={styles.contactPhone}>Hostel contact details are not configured yet.</Text>}
         {hostelResponders.map((item: any, idx: number) => (
           <Card key={idx} style={styles.contactCard}>
             <View style={styles.contactRow}>
@@ -261,6 +242,7 @@ export default function EmergencyScreen() {
 
         {/* SECTION 3: NATIONAL EMERGENCY SERVICES */}
         <Text style={styles.sectionHeading}>National Helplines & Women Safety</Text>
+        {nationalHelplines.length === 0 && <Text style={styles.contactPhone}>Emergency contact details are not configured yet.</Text>}
         {nationalHelplines.map((item: any, idx: number) => (
           <Card key={idx} style={styles.contactCard}>
             <View style={styles.contactRow}>
@@ -293,26 +275,25 @@ export default function EmergencyScreen() {
         ))}
 
         {/* SECTION 4: EXACT HOSTEL ADDRESS FOR RESPONDERS */}
-        <Text style={styles.sectionHeading}>Hostel Address & Landmark</Text>
+        <Text style={styles.sectionHeading}>Hostel Location</Text>
         <Card style={styles.addressCard}>
           <View style={styles.addressHeader}>
             <Ionicons name="location" size={22} color={Colors.primary} />
             <Text style={styles.addressTitle}>{hostelLocation.name}</Text>
           </View>
-          <Text style={styles.addressLine}>{hostelLocation.address}</Text>
+          {!!hostelLocation.address && <Text style={styles.addressLine}>{hostelLocation.address}</Text>}
           <Text style={styles.addressLine}>
             {hostelLocation.city} - {hostelLocation.pincode}
           </Text>
-          <View style={styles.landmarkBox}>
+          {(hostelLocation.landmark || hostelLocation.policeStation) && <View style={styles.landmarkBox}>
             <Text style={styles.landmarkText}>
               <Text style={{ fontWeight: '700' }}>Landmark: </Text>
               {hostelLocation.landmark}
             </Text>
-            <Text style={styles.landmarkText}>
-              <Text style={{ fontWeight: '700' }}>Nearest Station: </Text>
-              {hostelLocation.policeStation}
-            </Text>
-          </View>
+            {!!hostelLocation.policeStation && <Text style={styles.landmarkText}>
+              <Text style={{ fontWeight: '700' }}>Nearest Station: </Text>{hostelLocation.policeStation}
+            </Text>}
+          </View>}
 
           <TouchableOpacity
             style={styles.copyBtn}

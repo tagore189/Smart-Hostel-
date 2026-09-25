@@ -4,6 +4,7 @@ import {
   getComplaintById,
   createComplaint,
   uploadComplaintAttachment,
+  downloadComplaintAttachment,
   addComplaintComment,
   submitFeedback,
 } from '../controllers/complaintsController';
@@ -16,6 +17,7 @@ router.use(authenticate);
 router.get('/', getMyComplaints);
 router.post('/', createComplaint);
 router.post('/upload', upload.single('file'), uploadComplaintAttachment);
+router.get('/files/:fileId', downloadComplaintAttachment);
 router.get('/:id', getComplaintById);
 router.post('/:id/comments', addComplaintComment);
 router.post('/:id/feedback', submitFeedback);

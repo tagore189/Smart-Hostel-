@@ -14,7 +14,7 @@ const generateToken = (user: IUser): string => {
       name: user.name,
     },
     env.JWT_SECRET,
-    { expiresIn: '30d' }
+    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
   );
 };
 

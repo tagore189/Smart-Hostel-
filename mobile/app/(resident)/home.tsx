@@ -87,8 +87,8 @@ export default function HomeScreen() {
   };
 
   const firstName = user?.name?.split(' ')[0] || resident?.name?.split(' ')[0] || 'Resident';
-  const monthlyRent = paymentOverview?.monthlyRent || resident?.monthlyRent || 8000;
-  const currentStatus = paymentOverview?.currentStatus || 'PAID';
+  const monthlyRent = paymentOverview?.monthlyRent ?? resident?.monthlyRent;
+  const currentStatus = paymentOverview?.currentStatus || 'NO_RECORD';
   const isPaid = currentStatus === 'PAID';
   const mealsList = todayMess?.meals || [];
 
@@ -125,7 +125,7 @@ export default function HomeScreen() {
               <View style={styles.roomBadge}>
                 <Ionicons name="bed-outline" size={14} color="#FFF" />
                 <Text style={styles.roomBadgeText}>
-                  Room {resident?.roomNumber || '204'} • Bed {resident?.bedCode || 'B'} · {resident?.floorNumber || '2'}nd Floor
+                  {resident?.roomNumber ? `Room ${resident.roomNumber}` : 'Room unassigned'} · {resident?.bedCode ? `Bed ${resident.bedCode}` : 'Bed unassigned'} · {resident?.floorNumber ? `Floor ${resident.floorNumber}` : 'Floor unassigned'}
                 </Text>
               </View>
             </View>
@@ -141,7 +141,7 @@ export default function HomeScreen() {
         <View style={styles.feeBannerCard}>
           <View style={styles.feeBannerLeft}>
             <Text style={styles.feeBannerLabel}>Monthly Fee</Text>
-            <Text style={styles.feeBannerAmount}>₹{monthlyRent.toLocaleString('en-IN')}</Text>
+            <Text style={styles.feeBannerAmount}>{monthlyRent == null ? 'Fee not set' : `₹${monthlyRent.toLocaleString('en-IN')}`}</Text>
             <Text style={styles.feeBannerMonth}>
               {paymentOverview?.currentMonth || 'Current Billing Cycle'}
             </Text>
@@ -229,7 +229,7 @@ export default function HomeScreen() {
               <Text style={styles.mealTypeTitle}>Dining Schedule</Text>
             </View>
             <Text style={styles.mealItemsText}>
-              Breakfast: 8:00 AM · Lunch: 12:30 PM · Dinner: 7:30 PM
+              Meal times and today's menu are shown when published by hostel management.
             </Text>
           </Card>
         )}

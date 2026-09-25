@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -43,9 +42,9 @@ export default function ProfileScreen() {
     {
       title: 'Stay Details',
       items: [
-        { icon: 'home-outline' as const, label: 'Room', value: `Room ${resident?.roomNumber || '204'}` },
-        { icon: 'bed-outline' as const, label: 'Bed', value: `Bed ${resident?.bedCode || resident?.bedNumber || 'B'}` },
-        { icon: 'card-outline' as const, label: 'Monthly Rent', value: `₹${(resident?.monthlyRent || resident?.rentAmount || 8000).toLocaleString('en-IN')}` },
+        { icon: 'home-outline' as const, label: 'Room', value: resident?.roomNumber ? `Room ${resident.roomNumber}` : 'Unassigned' },
+        { icon: 'bed-outline' as const, label: 'Bed', value: resident?.bedCode || resident?.bedNumber ? `Bed ${resident.bedCode || resident.bedNumber}` : 'Unassigned' },
+        { icon: 'card-outline' as const, label: 'Monthly Rent', value: resident?.monthlyRent ?? resident?.rentAmount ? `₹${(resident.monthlyRent ?? resident.rentAmount).toLocaleString('en-IN')}` : 'Not set' },
       ],
     },
     {
@@ -70,10 +69,9 @@ export default function ProfileScreen() {
         {/* Profile Hero */}
         <View style={styles.heroSection}>
           <View style={styles.avatarContainer}>
-            <Image
-              source={require('../../assets/ananya.jpg')}
-              style={styles.avatar}
-            />
+            <View style={[styles.avatar, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#EDE9FE' }]}>
+              <Text style={{ color: Colors.primary, fontSize: 24, fontWeight: '800' }}>{(user?.name || 'R').slice(0, 1).toUpperCase()}</Text>
+            </View>
             <View style={styles.activeDot} />
           </View>
           <Text style={styles.heroName}>{user?.name || 'Resident'}</Text>

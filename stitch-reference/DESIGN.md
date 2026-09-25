@@ -140,7 +140,7 @@ The design system establishes a high-trust, safe, calm, and elevated atmosphere 
 ### Emotional Tenets
 - **Safety & Reassurance:** Clear status indicators, predictable navigation, and instantly reachable emergency protocols eliminate ambiguity and anxiety.
 - **Boutique Warmth:** Soft ambient tones and refined violet accents evoke an upscale residential hotel experience rather than a utilitarian dormitory.
-- **Frictionless Utility:** Rent receipts, maintenance requests, meal menus, gate passes, and emergency tools are accessible within two taps.
+- **Frictionless Utility:** Fees, complaints, meal menus, notices, stay details, and emergency tools are accessible within two taps.
 
 ### Key Palettes & Roles
 - **Primary (`#7C3AED` - Royal Violet):** Core brand actions, active bottom navigation states, primary buttons, and selected tabs.
@@ -152,6 +152,6 @@ The design system establishes a high-trust, safe, calm, and elevated atmosphere 
   - Card & Container Surface: `#FFFFFF`
   - Border Hairline: `#E5E2F0`
 - **Functional Semantics:**
-  - **Success (`#10B981`):** Paid rent invoices, approved leaves, verified visitor passes.
+  - **Success (`#10B981`):** Verified rent payments and resolved resident requests.
   - **Warning (`#F59E0B`):** Impending bill deadlines, routine maintenance in progress.
-  - **Alert & SOS (`#EF4444`):** Security alarms, 24/7 warden escalation, emergency gate alerts.
+  - **Alert & SOS (`#EF4444`):** Emergency requests, warden escalation, and active safety alerts.

@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 import { AuthRequest } from '../middleware/auth';
 import { Resident } from '../models/Resident';
 import { Bed } from '../models/Bed';
@@ -74,7 +75,8 @@ export const getAdminResidents = async (req: AuthRequest, res: Response): Promis
     const { search, status, floor } = req.query;
     const filter: any = {};
 
-    if (status && status !== 'ALL') filter.status = status;
+    if (status === 'INACTIVE') filter.status = { $in: ['PENDING', 'VACATED'] };
+    else if (status && status !== 'ALL') filter.status = status;
     if (floor && floor !== 'ALL') filter.floorNumber = Number(floor);
     if (search) {
       filter.$or = [
@@ -127,38 +129,57 @@ export const createAdminResident = async (req: AuthRequest, res: Response): Prom
       emergencyContactPhone,
     } = req.body;
 
-    const existing = await User.findOne({ $or: [{ email: email.toLowerCase().trim() }, { phone: phone.trim() }] });
+    if (!name?.trim() || !phone?.trim() || !email?.trim() || !roomNumber?.trim()) {
+      res.status(400).json({ success: false, message: 'Name, phone, email, and room are required.' });
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedPhone = phone.trim();
+    const normalizedRoom = roomNumber.trim();
+    const normalizedBed = (bedCode || 'A').toUpperCase().trim();
+    const existing = await User.findOne({ $or: [{ email: normalizedEmail }, { phone: normalizedPhone }] });
     if (existing) {
       res.status(400).json({ success: false, message: 'User with this email or phone already exists.' });
       return;
     }
 
-    const defaultPassword = 'Welcome@123';
-    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+    const room = await Room.findOne({ roomNumber: normalizedRoom, isActive: true });
+    if (!room) {
+      res.status(400).json({ success: false, message: 'Select an existing active room.' });
+      return;
+    }
+    const bed = await Bed.findOne({ room: room._id, bedCode: normalizedBed });
+    if (!bed || bed.status !== 'AVAILABLE') {
+      res.status(409).json({ success: false, message: 'The selected bed is unavailable.' });
+      return;
+    }
+
+    const temporaryPassword = randomBytes(12).toString('base64url');
+    const passwordHash = await bcrypt.hash(temporaryPassword, 12);
 
     const user = await User.create({
       name: name.trim(),
-      email: email.toLowerCase().trim(),
-      phone: phone.trim(),
-      password: hashedPassword,
+      email: normalizedEmail,
+      phone: normalizedPhone,
+      passwordHash,
       role: 'RESIDENT',
-      status: 'ACTIVE',
+      isActive: true,
     });
 
-    // Check room
-    let room = await Room.findOne({ roomNumber: roomNumber.trim() });
-    const floor = floorNumber ? Number(floorNumber) : (room ? room.floorNumber : 2);
+    const floor = room.floorNumber;
 
     const resident = await Resident.create({
       user: user._id,
       name: name.trim(),
       phone: phone.trim(),
-      email: email.toLowerCase().trim(),
-      roomNumber: roomNumber.trim(),
-      bedCode: (bedCode || 'A').toUpperCase().trim(),
+      email: normalizedEmail,
+      roomNumber: normalizedRoom,
+      bedCode: normalizedBed,
       floorNumber: floor,
-      wing: room?.wing || 'Wing A',
-      room: room?._id,
+      wing: room.wing,
+      room: room._id,
+      bed: bed._id,
       monthlyRent: Number(monthlyRent) || 8000,
       securityDeposit: Number(securityDeposit) || 10000,
       workOrCollege,
@@ -171,17 +192,14 @@ export const createAdminResident = async (req: AuthRequest, res: Response): Prom
       joiningDate: new Date(),
     });
 
-    // Mark bed occupied
-    await Bed.findOneAndUpdate(
-      { roomNumber: roomNumber.trim(), bedCode: (bedCode || 'A').toUpperCase().trim() },
-      { status: 'OCCUPIED', currentResident: resident._id },
-      { upsert: true }
-    );
+    bed.status = 'OCCUPIED';
+    bed.currentResident = resident._id;
+    await bed.save();
 
     res.status(201).json({
       success: true,
-      message: `Resident ${name} registered successfully. Default password is ${defaultPassword}`,
-      data: resident,
+      message: `Resident ${name.trim()} registered successfully. Share the temporary password securely and ask the resident to change it.`,
+      data: { resident, temporaryPassword },
     });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -220,7 +238,7 @@ export const getAdminFloors = async (req: AuthRequest, res: Response): Promise<v
           occupiedBeds: occInRoom,
           ratio: `${occInRoom}/${r.totalBeds}`,
           hasAc: r.hasAc,
-          monthlyRent: r.monthlyRent || r.rentAmount || 8000,
+          monthlyRent: r.monthlyRent ?? r.rentAmount,
         };
       });
 
@@ -298,22 +316,38 @@ export const assignBedResident = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const room = await Room.findOne({ roomNumber });
-    const floor = room ? room.floorNumber : parseInt(roomNumber[0], 10) || 2;
+    const room = await Room.findOne({ roomNumber, isActive: true });
+    const targetBed = room ? await Bed.findOne({ room: room._id, bedCode }) : null;
+    if (!room || !targetBed) {
+      res.status(404).json({ success: false, message: 'Active room and bed were not found.' });
+      return;
+    }
+    if (targetBed.status !== 'AVAILABLE' && !targetBed.currentResident?.equals(resident._id)) {
+      res.status(409).json({ success: false, message: 'That bed is already occupied or unavailable.' });
+      return;
+    }
 
-    // Update bed
-    await Bed.findOneAndUpdate(
-      { roomNumber, bedCode },
-      { status: 'OCCUPIED', currentResident: resident._id },
-      { upsert: true }
-    );
+    const previousBed = await Bed.findOne({ currentResident: resident._id });
+    if (previousBed && !previousBed._id.equals(targetBed._id)) {
+      previousBed.status = 'AVAILABLE';
+      previousBed.currentResident = undefined;
+      await previousBed.save();
+    }
+
+    targetBed.status = 'OCCUPIED';
+    targetBed.currentResident = resident._id;
+    await targetBed.save();
 
     // Update resident assignment
     resident.roomNumber = roomNumber;
     resident.bedCode = bedCode;
-    resident.floorNumber = floor;
-    if (room) resident.room = room._id;
+    resident.floorNumber = room.floorNumber;
+    resident.room = room._id;
+    resident.bed = targetBed._id;
+    resident.status = 'ACTIVE';
+    resident.checkedIn = true;
     await resident.save();
+    await User.updateOne({ _id: resident.user }, { isActive: true });
 
     res.json({
       success: true,
@@ -334,7 +368,14 @@ export const vacateBedResident = async (req: AuthRequest, res: Response): Promis
     }
 
     if (bed.currentResident) {
-      await Resident.findByIdAndUpdate(bed.currentResident, { status: 'CHECKED_OUT' });
+      const resident = await Resident.findById(bed.currentResident);
+      if (resident) {
+        resident.status = 'VACATED';
+        resident.checkedIn = false;
+        resident.bed = undefined;
+        await resident.save();
+        await User.updateOne({ _id: resident.user }, { isActive: false });
+      }
     }
 
     bed.status = 'AVAILABLE';
@@ -357,7 +398,7 @@ export const getAdminPaymentStats = async (req: AuthRequest, res: Response): Pro
     const currentMonth = (month as string) || new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
 
     const activeResidents = await Resident.find({ status: 'ACTIVE' });
-    const expectedFees = activeResidents.reduce((sum, r) => sum + (r.monthlyRent || 8000), 0);
+    const expectedFees = activeResidents.reduce((sum, r) => sum + (r.monthlyRent ?? 0), 0);
 
     const payments = await Payment.find();
     const paidPayments = payments.filter((p) => p.status === 'PAID');
@@ -427,7 +468,7 @@ export const recordAdminPayment = async (req: AuthRequest, res: Response): Promi
       notes,
     } = req.body;
 
-    if (!residentId || !amount) {
+    if (!residentId || !Number.isFinite(Number(amount)) || Number(amount) <= 0) {
       res.status(400).json({ success: false, message: 'Resident and amount are required.' });
       return;
     }
@@ -439,8 +480,13 @@ export const recordAdminPayment = async (req: AuthRequest, res: Response): Promi
     }
 
     const payMonth = month || new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
-    const receiptNumber = `SLG-REC-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${resident.roomNumber}`;
+    const receiptNumber = `SLG-REC-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${resident.roomNumber}-${randomBytes(3).toString('hex').toUpperCase()}`;
     const txnId = transactionId || `TXN-OFFLINE-${Date.now()}`;
+    const method = paymentMethod === 'Bank Transfer' ? 'NETBANKING' : paymentMethod === 'Cash' ? 'CASH' : paymentMethod === 'UPI' ? 'UPI' : null;
+    if (!method) {
+      res.status(400).json({ success: false, message: 'Payment method must be Cash, UPI, or Bank Transfer.' });
+      return;
+    }
 
     // Create payment record marked as PAID
     const payment = await Payment.create({
@@ -450,7 +496,7 @@ export const recordAdminPayment = async (req: AuthRequest, res: Response): Promi
       amount: Number(amount),
       type: 'RENT',
       status: 'PAID',
-      method: paymentMethod || 'Cash',
+      method,
       transactionId: txnId,
       receiptNumber,
       dueDate: new Date(),
@@ -485,6 +531,47 @@ export const recordAdminPayment = async (req: AuthRequest, res: Response): Promi
     });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const verifyAdminPaymentReference = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const payment = await Payment.findOne({ _id: req.params.id, status: 'PENDING' });
+    if (!payment) {
+      res.status(404).json({ success: false, message: 'Pending payment reference not found.' });
+      return;
+    }
+
+    const receiptNumber = `SLG-REC-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${payment.roomNumber}-${randomBytes(3).toString('hex').toUpperCase()}`;
+    payment.status = 'PAID';
+    payment.paidAt = new Date();
+    payment.receiptNumber = receiptNumber;
+    payment.notes = [payment.notes, `Verified by ${req.user?.name || 'hostel staff'}`].filter(Boolean).join(' | ');
+    await payment.save();
+
+    await Receipt.create({
+      payment: payment._id,
+      resident: payment.resident,
+      receiptNumber,
+      amount: payment.amount,
+      date: payment.paidAt,
+      method: payment.method,
+    });
+
+    const resident = await Resident.findById(payment.resident).select('user');
+    if (resident?.user) {
+      await createNotification({
+        recipientId: resident.user,
+        title: 'Payment Verified',
+        message: `Your ${payment.month} payment was verified. Receipt: ${receiptNumber}.`,
+        type: 'PAYMENT_SUCCESS',
+        data: { paymentId: payment._id, receiptNumber },
+      });
+    }
+
+    res.json({ success: true, message: 'Payment reference verified and receipt issued.', data: payment });
+  } catch {
+    res.status(500).json({ success: false, message: 'Unable to verify this payment reference.' });
   }
 };
 
@@ -652,7 +739,7 @@ export const getAdminReports = async (req: AuthRequest, res: Response): Promise<
     const avgRating =
       feedbacks.length > 0
         ? Number((feedbacks.reduce((sum, f) => sum + f.rating, 0) / feedbacks.length).toFixed(1))
-        : 4.5;
+        : 0;
 
     res.json({
       success: true,

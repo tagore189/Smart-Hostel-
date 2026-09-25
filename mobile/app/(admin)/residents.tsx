@@ -74,8 +74,14 @@ export default function AdminResidentsScreen() {
         emergencyContactPhone: emergencyPhone.trim(),
       });
     },
-    onSuccess: () => {
-      Alert.alert('Success', 'Resident profile registered successfully with default login Welcome@123');
+    onSuccess: (response: any) => {
+      const temporaryPassword = response?.data?.temporaryPassword;
+      Alert.alert(
+        'Resident created',
+        temporaryPassword
+          ? `Share this temporary password securely with the resident, then ask them to change it: ${temporaryPassword}`
+          : 'Resident profile registered successfully.'
+      );
       setShowAddModal(false);
       resetForm();
       queryClient.invalidateQueries({ queryKey: ['admin-residents'] });
